@@ -75,9 +75,10 @@ class OpenstackDriver:
             security_group = self.driver.ex_create_security_group(self._sec_group_name,
                                                                   "Security group for project '" +self.project_name+"'")
         else:
-            self.logger.warn("A security group with the name '%s' already exists!"
-                             "Be sure you used a unique project name!"
+            self.logger.warn("A security group with the name '%s' already exists! "
+                             "Be sure you used a unique project name! "
                              "Cluster creation doesn't continue. Quitting...", self._sec_group_name)
+            exit(1)
 
         return security_group
 
