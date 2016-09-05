@@ -1,0 +1,8 @@
+---
+# Openstack settings
+
+username: sph3r
+password: XXXXXXXXX
+project_name: sph3r_project
+auth_url: https://keystone.isis.vanderbilt.edu:5000/v2.0/tokens
+region_name: regionOne

@@ -6,4 +6,30 @@ projects_dir: ./projects
 
 # currently supported platforms: [ "openstack" ]
 platform: openstack
+platform_settings: ./config/openstack.yml
 
+# "hosts" key indicates the array of host descriptors
+hosts:
+  - name: bastion_host
+    type: bastion
+    count: 1 # optional, default value is 1
+    first:
+      assignPublicIP: true
+    ansible_vars:
+      - type: bastion
+
+  - name: mesos_master
+    type: mesos_master
+    count: 3
+    first:
+      assignPublicIP: true
+    ansible_vars:
+        - type: mesos_master
+        - useAsMarathonHost: true
+          multiplicity: unique
+
+  - name: mesos_agent
+    type: mesos_agent
+    count: 2
+    ansible_vars:
+        - type: mesos_agent
