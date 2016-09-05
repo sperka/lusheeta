@@ -1,42 +1,45 @@
 #!/usr/bin/env python
 
-import os
-import json
-import yaml
 import argparse
+import logging
+from clilib.utils import *
 
-class CloudCLI:
-    def __init__(self, action="create", config=None, project_name):
-        self.action = action
-        self.config = config
-        self.project_name = project_name
+from clilib.cloud_cli import CloudCLI
+
 
 if __name__ == "__main__":
-    with open("config/default.yml", 'r') as default_yaml_config_file:
-        config = yaml.load(default_yaml_config_file)
+    logging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger(__name__)
 
-    print(config)
-
-    allowed_actions=["create", "cleanup", "prepare_ansible", "run_ansible"]
+    allowed_actions = ["create", "cleanup", "prepare_ansible", "run_ansible"]
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="CPSWTNG Cloud CLI tool")
-    parser.add_argument("-a", "--action", choices=allowed_actions, help="the action to do")
+    parser.add_argument("-a", "--action", choices=allowed_actions, required=True, help="the action to do")
     parser.add_argument("-c", "--config", type=argparse.FileType('r'), help="path to the configuration file")
     parser.add_argument("-v", "--verbose", help="set verbosity mode", action="count")
     parser.add_argument("project", nargs=1, help="the name of the project")
 
     args = parser.parse_args()
 
-    action = "create"
-    if args.action:
-        action = args.action
-
+    action = args.action
     config_file = "config/default.yml"
     if args.config:
         config_file = args.config
-
+    cli_config = load_yaml_config(config_file)
     verbose_level = args.verbose
-    project_name = args.project
+    project_name = args.project[0]
 
-    cli = new CloudCLI(action, config, project_name)
+    # overwrite config.project with the passed value
+    cli_config['project'] = project_name
+
+    logger.debug("Starting CPSWTNG CLOUD CLI...")
+    logger.debug("Allowed actions for the CLI: %s", allowed_actions)
+    logger.debug("Passed args:\t"
+                 "action = '%s'\t"
+                 "config_file = '%s'\t"
+                 "verbose_level = '%s'\t"
+                 "project_name = '%s'", action, config_file, verbose_level, project_name)
+
+    cli = CloudCLI(action=action, config=cli_config, project_name=project_name)
+    cli.run()

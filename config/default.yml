@@ -2,3 +2,8 @@
 # defaults for cpswtng-cloud-cli
 
 project: cpswtngdefaultproject
+projects_dir: ./projects
+
+# currently supported platforms: [ "openstack" ]
+platform: openstack
+
