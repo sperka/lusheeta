@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 import utils
 
 
@@ -18,7 +19,7 @@ class CloudCLI:
         selected_platform = config['platform']
 
         platforms = utils.load_supported_platforms_config()
-        assert(selected_platform in platforms)
+        assert (selected_platform in platforms)
 
         self.logger.debug("Importing class '%s' for platform '%s'", platforms[selected_platform], selected_platform)
 
@@ -38,10 +39,18 @@ class CloudCLI:
         """
         # 1
         project_path = os.path.join(self.config['projects_dir'], self.config['project'])
-        if not os.path.exists(project_path):
-            os.makedirs(project_path)
+        self.logger.info("Creating project dir '%s'", project_path)
+        if os.path.exists(project_path):
+            backup_path = os.path.join(self.config['projects_dir'],
+                                       self.config['project'] + "-backup-" + time.strftime('%Y%m%d-%I%M%S'))
+            self.logger.warn("Project directory exists with the same name ('%s'). Backing up content into '%s'",
+                             project_path, backup_path)
+            os.rename(project_path, backup_path)
+
+        os.makedirs(project_path)
 
         # 2
+        self.logger.debug("Saving current config to project dir...")
         utils.write_yaml_config(os.path.join(project_path, "config.yml"), self.config)
 
         # 3

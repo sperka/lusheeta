@@ -2,4 +2,4 @@
 # Supported platforms
 # Use key-value pairs as <supported_platform>: <implementation_class_name>
 
-openstack: OpenstackDriver
+openstack: OpenStackDriver
