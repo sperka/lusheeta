@@ -1,5 +1,5 @@
 ---
 # Supported platforms
-# Use key-value pairs as <supported_platform>: <implementation_class_name>
+# Use key-value pairs as <supported_platform> (name of py module in 'clilib' folder): <implementation_class_name>
 
-openstack: OpenStackDriver
+openstack_driver: OpenStackDriver

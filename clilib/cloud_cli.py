@@ -14,7 +14,7 @@ class CloudCLI:
 
         # make sure "platform" is set in config
         if not config['platform']:
-            config['platform'] = "openstack"
+            config['platform'] = "openstack_driver"
 
         selected_platform = config['platform']
 
@@ -59,7 +59,7 @@ class CloudCLI:
 
     def cleanup(self):
         """Cleanup the cluster from the cloud"""
-        self.driver.cleanup()
+        self.driver.cleanup_cluster()
         return
 
     def prepare_ansible(self):
