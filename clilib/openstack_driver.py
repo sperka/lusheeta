@@ -149,14 +149,25 @@ class OpenStackDriver:
 
             # self.driver.ex_create_network(self._network_name, cidr)
             network = self.network_driver.create_network(name=self._network_name)
+            gateway_ip = cidr.replace('.0/24', '.1')
             subnet = self.network_driver.create_subnet(
                 name=self._subnet_name,
                 network_id=network.id,
                 ip_version="4",
                 cidr=cidr,
-                gateway_ip=cidr.replace('.0/24', '.1')
+                gateway_ip=gateway_ip
             )
-            router = self.network_driver.create_router(name=self._router_name)
+            ext_net_network = self.network_driver.find_network(self.config['ext_net_name'])
+            if ext_net_network:
+                router = self.network_driver.create_router(
+                    name=self._router_name,
+                    external_gateway_info={'network_id': ext_net_network.id}
+                )
+                #port = self.network_driver.create_port(fixed_ips=gateway_ip)
+                #self.network_driver.router_add_interface(router, subnet_id=subnet.id, port_id=port.id)
+            else:
+                self.logger.error("External gateway '%s' not found. Can't connect router to the external network...",
+                                  self.config['ext_net_name'])
 
         else:
             self.logger.warn("A network with the name '%s' already exists!"

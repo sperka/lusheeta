@@ -10,6 +10,7 @@ platform_settings: ./config/openstack.yml
 
 network_cidr: auto # 10.4.100.0/24
 network_cidr_template: 10.X.100.0/24
+ext_net_name: 'ext-net'
 
 # "hosts" key indicates the array of host descriptors
 hosts:
