@@ -39,6 +39,7 @@ class OpenStackDriver:
         self._network_name = self.project_name + "_network"
         self._subnet_name = self._network_name + "_subnet"
         self._router_name = self._network_name + "_router"
+        self._router_port_name = self._router_name + "_port"
         self._sec_group_name = self.project_name + "_secgroup"
 
     def create_cluster(self):
@@ -163,8 +164,9 @@ class OpenStackDriver:
                     name=self._router_name,
                     external_gateway_info={'network_id': ext_net_network.id}
                 )
-                #port = self.network_driver.create_port(fixed_ips=gateway_ip)
-                #self.network_driver.router_add_interface(router, subnet_id=subnet.id, port_id=port.id)
+                port = self.network_driver.create_port(name=self._router_port_name, network_id=network.id,
+                                                       fixed_ips=[{"subnet_id": subnet.id, "ip_address": gateway_ip}])
+                self.network_driver.router_add_interface(router, subnet_id=subnet.id, port_id=port.id)
             else:
                 self.logger.error("External gateway '%s' not found. Can't connect router to the external network...",
                                   self.config['ext_net_name'])
@@ -189,14 +191,26 @@ class OpenStackDriver:
         return cidr_template.replace('X', str(cidr_ctr))
 
     def cleanup_network(self):
+        self.logger.info("Cleaning up network %s", self._network_name)
+
         router = self.network_driver.find_router(self._router_name)
+        port = self.network_driver.find_port(self._router_port_name)
+        network = self.network_driver.find_network(self._network_name)
+        if len(network.subnet_ids):
+            subnet_id = network.subnet_ids[0]
+
         if router:
+            if port and subnet_id:
+                self.network_driver.router_remove_interface(router, subnet_id, port.id)
+            else:
+                self.logger.warn("Router port (%s) or subnet not found. Skipping...", self._router_port_name)
+
             self.network_driver.delete_router(router)
         else:
             self.logger.warn("Router '%s' was not found. Skipping...", self._router_name)
 
         # network = self.get_network()
-        network = self.network_driver.find_network(self._network_name)
+
         if network:
             # self.driver.ex_delete_network(network)
             self.logger.info("Cleaning up network '%s' and its subnet '%s'", self._network_name, self._subnet_name)
