@@ -1,4 +1,5 @@
 import logging
+import os
 import utils
 # from pprint import pprint
 
@@ -47,11 +48,11 @@ class OpenStackDriver:
         Creates the cluster on the OpenStack cloud.
 
         1. Create security group with default rules
-        2. Create network
-        3. Create subnet
-        4. Create router
-        5. Set router gateway to ext-net
-        6. Add router interface (router - subnet)
+        2. Create network, subnet, router, set router gateway to ext-net, add router interface (router - subnet)
+        3. Generate/locate ssh key-pair, then import
+        4. Create VMs
+        5. Create floating IPs and associate them
+        6. Import ssh key-pair to bastion if exists
         """
         # TEMP
         self.cleanup_cluster()
@@ -60,6 +61,7 @@ class OpenStackDriver:
 
         self.create_security_group()
         self.create_network()
+        self.create_ssh_key_pair()
 
     def cleanup_cluster(self):
         """
@@ -76,6 +78,7 @@ class OpenStackDriver:
         """
         self.logger.debug("Cleaning up cluster for project '%s'", self.project_name)
 
+        self.cleanup_ssh_key_pair()
         self.cleanup_network()
         self.cleanup_security_group()
 
@@ -196,7 +199,8 @@ class OpenStackDriver:
         router = self.network_driver.find_router(self._router_name)
         port = self.network_driver.find_port(self._router_port_name)
         network = self.network_driver.find_network(self._network_name)
-        if len(network.subnet_ids):
+        subnet_id = None
+        if network and len(network.subnet_ids):
             subnet_id = network.subnet_ids[0]
 
         if router:
@@ -219,3 +223,26 @@ class OpenStackDriver:
             self.network_driver.delete_network(network, ignore_missing=False)
         else:
             self.logger.warn("Network '%s' was not found. Skipping...", self._network_name)
+
+    def create_ssh_key_pair(self):
+        project_path = os.path.join(self.config['projects_dir'], self.config['project'])
+        self.logger.info("Creating ssh key pair %s and saving to %s", self._ssh_key, project_path)
+
+        key_pair = self.driver.create_key_pair(name=self._ssh_key)
+        utils.save_key(key_pair.private_key, os.path.join(project_path, self._ssh_key))
+        utils.save_key(key_pair.public_key, os.path.join(project_path, self._ssh_key + ".pub"))
+
+    def cleanup_ssh_key_pair(self):
+        self.logger.info("Cleaning up ssh key pair %s", self._ssh_key)
+
+        key_pairs = self.driver.ex_list_keypairs()
+        key_pair = None
+        for kp in key_pairs:
+            if kp.name == self._ssh_key:
+                key_pair = kp
+                break
+
+        if key_pair:
+            self.driver.delete_key_pair(key_pair)
+        else:
+            self.logger.warn("SSH key pair %s not found. Skipping...", self._ssh_key)

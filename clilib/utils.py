@@ -24,7 +24,12 @@ def load_supported_platforms_config():
 
 
 def import_platform_class(mod_name, class_name):
-    mod = __import__("clilib."+mod_name)
+    mod = __import__("clilib." + mod_name)
     mod = getattr(mod, mod_name)
     mod = getattr(mod, class_name)
     return mod
+
+
+def save_key(key, target_path):
+    with open(target_path, "wb") as file_stream:
+        file_stream.write(key)
