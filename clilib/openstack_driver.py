@@ -49,7 +49,7 @@ class OpenStackDriver:
 
         1. Create security group with default rules
         2. Create network, subnet, router, set router gateway to ext-net, add router interface (router - subnet)
-        3. Generate/locate ssh key-pair, then import
+        3. Create ssh key-pair in the cloud, then download
         4. Create VMs
         5. Create floating IPs and associate them
         6. Import ssh key-pair to bastion if exists
@@ -62,6 +62,7 @@ class OpenStackDriver:
         self.create_security_group()
         self.create_network()
         self.create_ssh_key_pair()
+        self.create_vms()
 
     def cleanup_cluster(self):
         """
@@ -78,6 +79,7 @@ class OpenStackDriver:
         """
         self.logger.debug("Cleaning up cluster for project '%s'", self.project_name)
 
+        self.terminate_vms()
         self.cleanup_ssh_key_pair()
         self.cleanup_network()
         self.cleanup_security_group()
@@ -246,3 +248,40 @@ class OpenStackDriver:
             self.driver.delete_key_pair(key_pair)
         else:
             self.logger.warn("SSH key pair %s not found. Skipping...", self._ssh_key)
+
+    def create_vms(self):
+        print "create vms"
+
+        security_group = self.get_security_group()
+        if not security_group:
+            self.logger.error("Error retrieving security group %s when creating nodes. Quitting...",
+                              self._sec_group_name)
+            exit(1)
+
+        network = self.get_network()
+        if not network:
+            self.logger.error("Error retrieving network %s when creating nodes. Quitting...", self._network_name)
+            exit(1)
+
+        sizes_list = self.driver.list_sizes()
+        node_sizes = dict((x.name, x) for x in sizes_list)
+
+        hosts = self.config['hosts']
+        for host in hosts:
+            cnt = host['count']
+
+            for i in range(0, cnt):
+                host_name = host['name']
+                if cnt > 1:
+                    host_name = host['name'] + "_" + str(i+1)
+
+                size = node_sizes[host['vm_flavor']] or "m1.medium"
+                self.driver.craete_node(name=host_name,
+                                        size=size,
+                                        ex_keyname=self._ssh_key,
+                                        ex_securitygroups=[security_group],
+                                        networks=[network])
+
+
+    def terminate_vms(self):
+        print "terminate vms"

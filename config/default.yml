@@ -12,19 +12,24 @@ network_cidr: auto # 10.4.100.0/24
 network_cidr_template: 10.X.100.0/24
 ext_net_name: 'ext-net'
 
+default_image: 'Ubuntu 14.04.2_20150505'
 # "hosts" key indicates the array of host descriptors
 hosts:
   - name: bastion_host
-    type: bastion
+    vm_flavor: m1.tiny
     count: 1 # optional, default value is 1
-    first:
-      assignPublicIP: true
-    ansible_vars:
-      - type: bastion
+    image: 'Ubuntu 14.04.2_20150505'
+    special_vars:
+      - index: 0
+        assignPublicIP: true
+    services:
+      - ansible_role: bastion
+        ansible_vars:
+          - type: bastion
 
   - name: mesos_master
-    type: mesos_master
-    count: 3
+    vm_flavor: m1.large
+    count: 1
     first:
       assignPublicIP: true
     ansible_vars:
@@ -33,7 +38,7 @@ hosts:
           multiplicity: unique
 
   - name: mesos_agent
-    type: mesos_agent
+    vm_flavor: m1.large
     count: 2
     ansible_vars:
         - type: mesos_agent
