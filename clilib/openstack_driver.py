@@ -57,7 +57,7 @@ class OpenStackDriver:
         6. Import ssh key-pair to bastion if exists
         """
         # TODO: check available resources
-        # my_limits = self.driver.ex_limits()
+        # self.check_available_resources()
 
         # TEMP
         self.cleanup_cluster()
@@ -68,6 +68,7 @@ class OpenStackDriver:
         self.create_network()
         self.create_ssh_key_pair()
         self.create_vms()
+        self.create_floating_ips()
 
     def cleanup_cluster(self):
         """
@@ -88,6 +89,9 @@ class OpenStackDriver:
         self.cleanup_ssh_key_pair()
         self.cleanup_network()
         self.cleanup_security_group()
+
+    def check_available_resources(self):
+        self.logger.warn("'check_available_resources' NOT IMPLEMENTED YET")
 
     def get_security_group(self):
         """
@@ -344,3 +348,7 @@ class OpenStackDriver:
             wait_more = any(node.name in node_names for node in nodes)
 
         self.logger.debug("All nodes terminated...")
+
+    def create_floating_ips(self):
+        self.logger.warn("create_floating_ips NOT IMPLEMENTED YET")
+
