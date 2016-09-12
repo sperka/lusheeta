@@ -1,7 +1,7 @@
 import logging
 import os
 import utils
-# from pprint import pprint
+import time
 
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
@@ -10,6 +10,8 @@ from openstack import connection
 
 
 class OpenStackDriver:
+    cloud_images_dict = None
+
     def __init__(self, config, project_name):
         self.logger = logging.getLogger(__name__)
 
@@ -54,6 +56,9 @@ class OpenStackDriver:
         5. Create floating IPs and associate them
         6. Import ssh key-pair to bastion if exists
         """
+        # TODO: check available resources
+        # my_limits = self.driver.ex_limits()
+
         # TEMP
         self.cleanup_cluster()
 
@@ -250,7 +255,7 @@ class OpenStackDriver:
             self.logger.warn("SSH key pair %s not found. Skipping...", self._ssh_key)
 
     def create_vms(self):
-        print "create vms"
+        self.logger.info("Creating VMs...")
 
         security_group = self.get_security_group()
         if not security_group:
@@ -264,24 +269,78 @@ class OpenStackDriver:
             exit(1)
 
         sizes_list = self.driver.list_sizes()
+        if not sizes_list:
+            self.logger.error("Error retrieving flavors. Quitting...")
+            exit(1)
+
         node_sizes = dict((x.name, x) for x in sizes_list)
+        default_image = self.get_image(self.config['default_image'])
 
         hosts = self.config['hosts']
+        new_nodes = []
         for host in hosts:
-            cnt = host['count']
+            cnt = host['count'] or 1
 
             for i in range(0, cnt):
-                host_name = host['name']
+                host_name = self.project_name + "-" + host['name']
                 if cnt > 1:
-                    host_name = host['name'] + "_" + str(i+1)
+                    host_name = host_name + "_" + str(i + 1)
 
-                size = node_sizes[host['vm_flavor']] or "m1.medium"
-                self.driver.craete_node(name=host_name,
-                                        size=size,
-                                        ex_keyname=self._ssh_key,
-                                        ex_securitygroups=[security_group],
-                                        networks=[network])
+                size = node_sizes[host['vm_flavor']] or node_sizes["m1.medium"]
+                image = default_image
+                if 'image' in host:
+                    image = self.get_image(host['image'])
 
+                self.logger.info("Creating VM: %s", host_name)
+                node = self.driver.create_node(name=host_name,
+                                               size=size,
+                                               image=image,
+                                               ex_keyname=self._ssh_key,
+                                               ex_securitygroups=[security_group],
+                                               networks=[network])
+                new_nodes.append(node)
+
+        self.logger.debug("Waiting for new nodes to start up...")
+        start_time = time.time()
+        self.driver.wait_until_running(new_nodes, wait_period=5, timeout=self.config['hosts_startup_timeout'])
+        self.logger.debug("Startup for %s nodes took %s seconds", len(new_nodes), (time.time() - start_time))
+
+    def get_image(self, name):
+        if not OpenStackDriver.cloud_images_dict:
+            cloud_images = self.driver.list_images()
+            if not cloud_images:
+                self.logger.error("Error retrieving image list. Quitting...")
+                exit(1)
+            OpenStackDriver.cloud_images_dict = dict((x.name, x) for x in cloud_images)
+
+        return OpenStackDriver.cloud_images_dict[name]
 
     def terminate_vms(self):
-        print "terminate vms"
+        self.logger.info("Terminating VMs...")
+        nodes = self.driver.list_nodes()
+        node_names = []
+        for host in self.config['hosts']:
+            cnt = host['count'] or 1
+            for i in range(0, cnt):
+                host_name = self.project_name + "-" + host['name']
+                if cnt > 1:
+                    host_name = host_name + "_" + str(i + 1)
+                node_names.append(host_name)
+
+        for node in nodes:
+            if node.name in node_names:
+                self.logger.info("Terminating VM: %s", node.name)
+                res = self.driver.destroy_node(node)
+                if not res:
+                    self.logger.error("Error terminating %s!")
+
+        # need to wait until termination process finishes
+        self.logger.debug("Waiting for nodes to terminate...")
+        wait_more = True
+        while wait_more:
+            self.logger.debug("Still waiting for nodes to terminate...")
+            time.sleep(5)
+            nodes = self.driver.list_nodes()
+            wait_more = any(node.name in node_names for node in nodes)
+
+        self.logger.debug("All nodes terminated...")

@@ -12,33 +12,53 @@ network_cidr: auto # 10.4.100.0/24
 network_cidr_template: 10.X.100.0/24
 ext_net_name: 'ext-net'
 
+# ### HOSTS related information ###
+
 default_image: 'Ubuntu 14.04.2_20150505'
+hosts_startup_timeout: 600
+
 # "hosts" key indicates the array of host descriptors
 hosts:
   - name: bastion_host
-    vm_flavor: m1.tiny
+    vm_flavor: m1.small
     count: 1 # optional, default value is 1
     image: 'Ubuntu 14.04.2_20150505'
-    special_vars:
+    cloud_vars:
       - index: 0
         assignPublicIP: true
     services:
-      - ansible_role: bastion
+      - ansible_role: bastion # ansible_role is ignored now
         ansible_vars:
-          - type: bastion
+          - index: all
+            type: bastion
+      - ansible_group: bastion
 
   - name: mesos_master
     vm_flavor: m1.large
     count: 1
-    first:
-      assignPublicIP: true
-    ansible_vars:
-        - type: mesos_master
-        - useAsMarathonHost: true
-          multiplicity: unique
+    cloud_vars:
+      - index: 0
+        assignPublicIP: true
+    services:
+      - ansible_role: mesos
+        ansible_vars:
+          - type: mesos_master
+      - ansible_group: mesos_master
+        group_vars:
+          - index: 0
+            useAsMarathonHost: true
 
   - name: mesos_agent
     vm_flavor: m1.large
     count: 2
-    ansible_vars:
-        - type: mesos_agent
+    cloud_vars:
+      - index: 0
+        assignPublicIP: true
+    services:
+      - ansible_role: mesos
+        ansible_vars:
+          - type: mesos_agent
+      - ansible_group: mesos_agent
+        group_vars:
+          - index: 0
+            useAsMarathonHost: true

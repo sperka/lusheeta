@@ -33,3 +33,12 @@ def import_platform_class(mod_name, class_name):
 def save_key(key, target_path):
     with open(target_path, "wb") as file_stream:
         file_stream.write(key)
+
+
+def static_vars(**kwargs):
+    def decorate(func):
+        for k in kwargs:
+            setattr(func, k, kwargs[k])
+        return func
+    return decorate
+

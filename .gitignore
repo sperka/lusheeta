@@ -88,6 +88,9 @@ ENV/
 # Rope project settings
 .ropeproject
 
+# mac
+.DS_Store
+
 # IDE
 .idea/
 
