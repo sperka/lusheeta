@@ -11,6 +11,7 @@ from openstack import connection
 
 class OpenStackDriver:
     cloud_images_dict = None
+    ip_pools = None
 
     def __init__(self, config, project_name):
         self.logger = logging.getLogger(__name__)
@@ -60,6 +61,8 @@ class OpenStackDriver:
         # self.check_available_resources()
 
         # TEMP
+        self.process_cloud_vars()
+
         self.cleanup_cluster()
 
         self.logger.info("Creating new cluster for project '%s'...", self.project_name)
@@ -68,7 +71,7 @@ class OpenStackDriver:
         self.create_network()
         self.create_ssh_key_pair()
         self.create_vms()
-        self.create_floating_ips()
+
 
     def cleanup_cluster(self):
         """
@@ -85,6 +88,7 @@ class OpenStackDriver:
         """
         self.logger.debug("Cleaning up cluster for project '%s'", self.project_name)
 
+        self.disassociate_floating_ips()
         self.terminate_vms()
         self.cleanup_ssh_key_pair()
         self.cleanup_network()
@@ -323,6 +327,11 @@ class OpenStackDriver:
         self.logger.info("Terminating VMs...")
         nodes = self.driver.list_nodes()
         node_names = []
+
+        # def gather_names(hostname):
+        #    node_names.append(hostname)
+        # self.iterate_through_hosts(gather_names)
+
         for host in self.config['hosts']:
             cnt = host['count'] or 1
             for i in range(0, cnt):
@@ -349,6 +358,87 @@ class OpenStackDriver:
 
         self.logger.debug("All nodes terminated...")
 
-    def create_floating_ips(self):
-        self.logger.warn("create_floating_ips NOT IMPLEMENTED YET")
+    def process_cloud_vars(self):
+        nodes = self.driver.list_nodes()
 
+        for host in self.config['hosts']:
+            cnt = host['count'] or 1
+
+            if 'cloud_vars' in host:
+                for cloud_var in host['cloud_vars']:
+                    index = 'all'
+                    if 'index' in cloud_var:
+                        index = cloud_var['index']
+
+                    if 'assignPublicIP' in cloud_var:
+                        if cloud_var['assignPublicIP']:
+                            self.create_and_assign_floating_ip(host, index, nodes)
+
+    def create_and_assign_floating_ip(self, host, index, nodes):
+        if not OpenStackDriver.ip_pools:
+            OpenStackDriver.ip_pools = self.driver.ex_list_floating_ip_pools()
+            if not OpenStackDriver.ip_pools:
+                self.logger.error("Error retrieving ip_pools. Quitting...")
+                exit(1)
+
+        def pick_node(_nodes, name):
+            for n in _nodes:
+                if n.name == name:
+                    return n
+
+        ip_pool = OpenStackDriver.ip_pools[0] if len(OpenStackDriver.ip_pools) > 0 else None
+        if ip_pool:
+            ip_pool = ip_pool.name
+        cnt = host['count'] or 1
+        if index == 'all':
+            index = range(0, cnt)
+        else:
+            index = range(index, index+1)
+
+        for i in index:
+            floating_ip_address = self.driver.ex_create_floating_ip(ip_pool=ip_pool)
+            host_name = self.project_name + "-" + host['name']
+            if cnt > 1:
+                host_name = host_name + "_" + str(i + 1)
+            node = pick_node(nodes, host_name)
+            self.logger.info("Creating floating ip and assigning to node %s", host_name)
+            succ = self.driver.ex_attach_floating_ip_to_node(node, floating_ip_address)
+            if not succ:
+                self.logger.error("Couldn't attach floating ip address %s to node %s", floating_ip_address.ip_address,
+                                  host_name)
+
+    def iterate_through_hosts(self, action):
+        for host in self.config['hosts']:
+            cnt = host['count'] or 1
+
+            for i in range(0, cnt):
+                host_name = self.project_name + "-" + host['name']
+                if cnt > 1:
+                    host_name = host_name + "_" + str(i + 1)
+
+                action(host_name)
+
+    def disassociate_floating_ips(self):
+        nodes = self.driver.list_nodes()
+        node_names = []
+        for host in self.config['hosts']:
+            cnt = host['count'] or 1
+
+            for i in range(0, cnt):
+                host_name = self.project_name + "-" + host['name']
+                if cnt > 1:
+                    host_name = host_name + "_" + str(i + 1)
+                node_names.append(host_name)
+
+        floating_ips = self.driver.ex_list_floating_ips()
+        floating_ips_dict = dict((x.ip_address, x) for x in floating_ips)
+
+        for node in nodes:
+            if node.name in node_names:
+                if node.public_ips:
+                    for ip_to_detach in node.public_ips:
+                        self.logger.info("Detaching ip '%s' from node '%s'", ip_to_detach, node.name)
+                        self.driver.ex_detach_floating_ip_from_node(node, ip_to_detach)
+
+                    self.logger.info("Deleting floating ip '%s'", ip_to_detach)
+                    self.driver.ex_delete_floating_ip(floating_ips_dict[ip_to_detach])

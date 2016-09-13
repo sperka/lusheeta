@@ -53,7 +53,7 @@ hosts:
     count: 2
     cloud_vars:
       - index: 0
-        assignPublicIP: true
+        assignPublicIP: false
     services:
       - ansible_role: mesos
         ansible_vars:
