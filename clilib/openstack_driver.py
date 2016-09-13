@@ -61,7 +61,7 @@ class OpenStackDriver:
         # self.check_available_resources()
 
         # TEMP
-        self.cleanup_cluster()
+        # self.cleanup_cluster()
 
         self.logger.info("Creating new cluster for project '%s'...", self.project_name)
 
@@ -71,6 +71,8 @@ class OpenStackDriver:
         self.create_vms()
 
         self.process_cloud_vars()
+
+        self.logger.info("Cluster setup for project '%s' complete...", self.project_name)
 
     def cleanup_cluster(self):
         """
@@ -85,13 +87,15 @@ class OpenStackDriver:
 
         :return:
         """
-        self.logger.debug("Cleaning up cluster for project '%s'", self.project_name)
+        self.logger.info("Cleaning up cluster for project '%s'", self.project_name)
 
         self.disassociate_floating_ips()
         self.terminate_vms()
         self.cleanup_ssh_key_pair()
         self.cleanup_network()
         self.cleanup_security_group()
+
+        self.logger.info("Cluster cleanup for project '%s' complete...", self.project_name)
 
     def check_available_resources(self):
         self.logger.warn("'check_available_resources' NOT IMPLEMENTED YET")

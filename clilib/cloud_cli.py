@@ -94,3 +94,8 @@ class CloudCLI:
             cloud_vars = host.setdefault('cloud_vars', [])
             for cv in cloud_vars:
                 cv.setdefault('index', 'all')
+
+        ansible = config.setdefault('ansible', {})
+        ansible.setdefault('ansible_dir', '../ansible/')
+        ansible.setdefault('playbook', 'playbooks/setup_mesos_cluster.yml')
+        ansible.setdefault('inventory_template', 'inventory/cluster_template.j2')
