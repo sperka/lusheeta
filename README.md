@@ -4,6 +4,28 @@ This set of scripts helps you to manage separate clusters in your cloud. The too
 cluster of your choice (see #Configuration).
 
 ---
+# Usage
+
+    $ ./main.py -h                                                                                                            2 ↵
+    usage: main.py [-h] -a {create,cleanup,prepare_ansible,run_ansible}
+                   [-c CONFIG] [-v]
+                   project
+    
+    Cloud CLI tool
+    
+    positional arguments:
+      project               the name of the project
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -a | --action {create,cleanup,prepare_ansible,run_ansible}
+                            the action to do
+      -c | --config CONFIG
+                            path to the configuration file
+      -v, --verbose         set verbosity mode
+
+---
+
 # Configuration
 
 You can find the configuration files in the `./config` dir.
