@@ -64,7 +64,10 @@ This configuration file is the main configuration for the CLI tool. You can set 
     
                 * `assignPublicIP` _boolean_ - when `true`, a public IP will be assigned to the `index`-th host
                  
-                 
+ * `ansible` _dict_ - ansible settings to setup cluster
+    * `ansible_dir` - the path to directory where your ansible project files reside
+    * `playbook` - relative path to the playbook to run your setup
+    * `inventory_template` - a _jinja2_ template file for your inventory to use
                  
                  
 ---
