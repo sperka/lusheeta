@@ -301,7 +301,7 @@ class OpenStackDriver:
 
                 image = default_image
                 if 'image' in host:
-                    image = self.get_image(host['image'])
+                    image = self.get_image(host['image_name'])
 
                 self.logger.info("Creating VM: %s", host_name)
                 node = self.driver.create_node(name=host_name,

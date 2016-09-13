@@ -25,7 +25,7 @@ hosts:
   - name: bastion_host
     vm_flavor: m1.small
     count: 1 # optional, default value is 1
-    image: 'Ubuntu 14.04.2_20150505'
+    image_name: 'Ubuntu 14.04.2_20150505'
     cloud_vars:
       - index: 0
         assignPublicIP: true

@@ -86,7 +86,7 @@ class CloudCLI:
         vm_mgmt.setdefault('default_image_name', 'Ubuntu 14.04.2_20150505')
         vm_mgmt.setdefault('default_vm_flavor', 'm1.medium')
         vm_mgmt.setdefault('hosts_startup_timeout', 600)
-        vm_mgmt.setdefault('terminate_vm_poll', 2)
+        vm_mgmt.setdefault('terminate_vm_poll', 5)
 
         hosts = config.setdefault('hosts', [])
         for host in hosts:
