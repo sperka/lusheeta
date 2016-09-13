@@ -46,32 +46,44 @@ This configuration file is the main configuration for the CLI tool. You can set 
     * `terminate_vm_poll` - the amount of time (in seconds) to wait between polls when terminating vms
         * default: `5`
         
- * `hosts` _array_ - the section to setup host configs
-    * `host` _dict_ - configuration of one host
-        * `name` _required_ - the name of the host
-        * `vm_flavor` _optional_ - the name of the flavor to spin up a vm. This property overrides `vm_management.default_vm_flavor`
-        * `count` _optional_ - the number of vms to spin up with these properties. If this field is missing, default
-                            value of `1` will be used.
-        * `image_name` _optional_ - the name of the image to spin up a vm. This property overrides
-            `vm_management.default_image_name`
-        * `cloud_vars` _optional_ _array_ - implementation specific special variables. Each item in the array must be a
-            _dict_ that contains the following parameter:
-             * `index` _all | \<number\>_ - the index to which host to apply the current special var
-                * possible values can be `all` or the index `<number>` of the host
-                * see `config/default.yml` as example
+ * `hosts` _array_ - the section to setup host configs. Each array item is a `host` _dict_, which is a configuration
+                     for one host
+    * `name` _required_ - the name of the host
+    * `vm_flavor` _optional_ - the name of the flavor to spin up a vm. This property overrides `vm_management.default_vm_flavor`
+    * `count` _optional_ - the number of vms to spin up with these properties. If this field is missing, default
+                        value of `1` will be used.
+    * `image_name` _optional_ - the name of the image to spin up a vm. This property overrides
+        `vm_management.default_image_name`
+    * `cloud_vars` _optional_ _array_ - implementation specific special variables. Each item in the array must be a
+        _dict_ that contains the following parameter:
+         * `index` _all | \<number\>_ - the index to which host to apply the current special var
+            * possible values can be `all` or the index `<number>` of the host
+            * see `config/default.yml` as example
+            
+            _Implemented options so far:_
+
+            * `assignPublicIP` _boolean_ - when `true`, a public IP will be assigned to the `index`-th host
                 
-                Implemented options so far:
-    
-                * `assignPublicIP` _boolean_ - when `true`, a public IP will be assigned to the `index`-th host
+    * `ansible_settings` _array_ - the section to setup the ansible settings for the host. Each item in the array
+                                    is a _dict_ with the following parameters:
+        * `ansible_group` - which ansible group this host will belong to
+        * `group_vars` _array_ - an array of _dict_ items to describe group-level variables. Each item must contain
+                                an _index_ key and the desired parameter key with its value
+          * `index` - which item in the list should have the parameter key
+          * `parameter_key: parameter_value` - the parameter key-value to add in the inventory file for the current host
+ 
+        * `item_vars` _array_ - an array of key-value pairs that _every_ item should contain in the group
                  
  * `ansible` _dict_ - ansible settings to setup cluster
     * `ansible_dir` - the path to directory where your ansible project files reside
     * `playbook` - relative path to the playbook to run your setup
-    * `inventory_template` - a _jinja2_ template file for your inventory to use
+    * `inventory_template` _optional_ - a _jinja2_ template file for your inventory to use
+    * `ssh_config_template` _optional_ - a _jinja2_ template file for the `ssh.config` file
+    * `ansible_cfg_template` _optional_ - a _jinja2_ template file for the `ansible.cfg` file
                  
                  
 ---
 
 ** For OpenStack networking the
 [official OpenStack SDK](http://developer.openstack.org/sdks/python/openstacksdk/users/index.html) was used as libcloud
-doesn't support the required functionalities (i.e. networking).
+doesn't support the required functionalities (i.e. creating/removing subnets, networks, routers, etc).

@@ -29,12 +29,11 @@ hosts:
     cloud_vars:
       - index: 0
         assignPublicIP: true
-    services:
-      - ansible_role: bastion # ansible_role is ignored now
-        ansible_vars:
-          - index: all
-            type: bastion
+    ansible_settings:
       - ansible_group: bastion
+        item_vars:
+          - ansible_host: public_ip # public_ip | private_ip
+          - hostname: host_name
 
   - name: mesos_master
     vm_flavor: m1.large
@@ -42,14 +41,18 @@ hosts:
     cloud_vars:
       - index: 0
         assignPublicIP: true
-    services:
-      - ansible_role: mesos
-        ansible_vars:
-          - type: mesos_master
+    ansible_settings:
       - ansible_group: mesos_master
         group_vars:
           - index: 0
             useAsMarathonHost: true
+        item_vars:
+          - ansible_host: private_ip
+          - hostname: host_name
+      - ansible_group: zookeeper
+        group_vars:
+          - index: 0
+            zoo_id: 1
 
   - name: mesos_agent
     vm_flavor: m1.large
@@ -57,14 +60,14 @@ hosts:
     cloud_vars:
       - index: 0
         assignPublicIP: false
-    services:
-      - ansible_role: mesos
-        ansible_vars:
-          - type: mesos_agent
+    ansible_settings:
       - ansible_group: mesos_agent
         group_vars:
           - index: 0
             useAsMarathonHost: true
+        item_vars:
+          - ansible_host: private_ip
+          - hostname: host_name
 
 ansible:
   ansible_dir: ~/projects/c2wt/repos/cpswtng-ansible/
