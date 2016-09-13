@@ -96,7 +96,7 @@ This configuration file is the main configuration for the CLI tool. You can set 
  
         * `item_vars` _array_ - an array of key-value pairs that _every_ item should contain in the group
                  
- * `ansible` _dict_ - ansible settings to setup cluster
+ * `ansible` _dict_ - ansible settings to setup the software infrastructure
     * `ansible_dir` - the path to directory where your ansible project files reside
     * `playbook` - relative path to the playbook to run your setup
     * `inventory_template` _optional_ - a _jinja2_ template file for your inventory to use
