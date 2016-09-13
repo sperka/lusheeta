@@ -16,6 +16,7 @@ ext_net_name: 'ext-net'
 
 default_image: 'Ubuntu 14.04.2_20150505'
 hosts_startup_timeout: 600
+terminate_vm_poll: 2
 
 # "hosts" key indicates the array of host descriptors
 hosts:

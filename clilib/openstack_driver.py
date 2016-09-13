@@ -61,8 +61,6 @@ class OpenStackDriver:
         # self.check_available_resources()
 
         # TEMP
-        self.process_cloud_vars()
-
         self.cleanup_cluster()
 
         self.logger.info("Creating new cluster for project '%s'...", self.project_name)
@@ -71,6 +69,8 @@ class OpenStackDriver:
         self.create_network()
         self.create_ssh_key_pair()
         self.create_vms()
+
+        self.process_cloud_vars()
 
 
     def cleanup_cluster(self):
@@ -352,7 +352,7 @@ class OpenStackDriver:
         wait_more = True
         while wait_more:
             self.logger.debug("Still waiting for nodes to terminate...")
-            time.sleep(5)
+            time.sleep(self.config['terminate_vm_poll'])
             nodes = self.driver.list_nodes()
             wait_more = any(node.name in node_names for node in nodes)
 
