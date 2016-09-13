@@ -8,22 +8,25 @@ class CloudCLI:
     def __init__(self, action, config, project_name):
         self.logger = logging.getLogger(__name__)
 
+        self.preprocess_config(config)
+
         self.action = action
         self.config = config
         self.project_name = project_name
 
         # make sure "platform" is set in config
         if not config['platform']:
-            config['platform'] = "openstack_driver"
+            config['platform'] = "openstack"
 
-        selected_platform = config['platform']
-
+        platform_name = config['platform']
         platforms = utils.load_supported_platforms_config()
-        assert (selected_platform in platforms)
+        assert (platform_name in platforms)
 
-        self.logger.debug("Importing class '%s' for platform '%s'", platforms[selected_platform], selected_platform)
+        platform = platforms[platform_name]
+        config['platform_settings'] = platform
 
-        _PLATFORM_CLASS = utils.import_platform_class(selected_platform, platforms[selected_platform])
+        self.logger.info("Instantiating class '%s' for platform '%s'", platform['class_name'], platform_name)
+        _PLATFORM_CLASS = utils.import_platform_class(platform['module_name'], platform['class_name'])
         self.driver = _PLATFORM_CLASS(config, project_name)
 
     def run(self):
@@ -69,3 +72,7 @@ class CloudCLI:
     def run_ansible(self):
         """Run the ansible setup on the cluster in the cloud"""
         return
+
+    def preprocess_config(self, config):
+        self.logger.info("Preprocessing config and settings necessary defaults...")
+        config.setdefault('projects_dir', './projects')

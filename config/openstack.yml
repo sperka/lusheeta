@@ -4,6 +4,5 @@
 username: sph3r
 password: XXXXXXXXX
 project_name: sph3r_project
-libcloud_auth_url: https://keystone.isis.vanderbilt.edu:5000/v2.0/tokens
-openstacksdk_auth_url: https://keystone.isis.vanderbilt.edu:5000/v2.0
+auth_url_base: https://keystone.isis.vanderbilt.edu:5000/v2.0
 region_name: regionOne

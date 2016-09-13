@@ -19,17 +19,17 @@ class OpenStackDriver:
         self.config = config
         self.project_name = project_name
 
-        self.logger.debug("Loading openstack yaml config '%s'", config['platform_settings'])
-        openstack_settings = utils.load_yaml_config(config['platform_settings'])
+        self.logger.debug("Loading openstack yaml config '%s'", config['platform_settings']['settings_file'])
+        openstack_settings = utils.load_yaml_config(config['platform_settings']['settings_file'])
 
         self.driver = get_driver(Provider.OPENSTACK)(openstack_settings['username'], openstack_settings['password'],
                                                      ex_tenant_name=openstack_settings['project_name'],
-                                                     ex_force_auth_url=openstack_settings['libcloud_auth_url'],
+                                                     ex_force_auth_url=openstack_settings['auth_url_base']+'/tokens',
                                                      ex_force_auth_version='2.0_password',
                                                      ex_force_service_region=openstack_settings['region_name'])
 
         auth_args = {
-            'auth_url': openstack_settings['openstacksdk_auth_url'],
+            'auth_url': openstack_settings['auth_url_base'],
             'project_name': openstack_settings['project_name'],
             'username': openstack_settings['username'],
             'password': openstack_settings['password']

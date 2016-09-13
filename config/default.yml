@@ -5,8 +5,7 @@ project: cpswtngdefaultproject
 projects_dir: ./projects
 
 # currently supported platforms: [ "openstack" ]
-platform: openstack_driver
-platform_settings: ./config/openstack.yml
+platform: openstack
 
 network_cidr: auto # 10.4.100.0/24
 network_cidr_template: 10.X.100.0/24
