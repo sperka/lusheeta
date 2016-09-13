@@ -14,9 +14,11 @@ network:
 
 # ### HOSTS related information ###
 
-default_image: 'Ubuntu 14.04.2_20150505'
-hosts_startup_timeout: 600
-terminate_vm_poll: 2
+vm_management:
+  default_image_name: 'Ubuntu 14.04.2_20150505'
+  default_vm_flavor: 'm1.medium'
+  hosts_startup_timeout: 600
+  terminate_vm_poll: 2
 
 # "hosts" key indicates the array of host descriptors
 hosts:

@@ -76,9 +76,21 @@ class CloudCLI:
     def preprocess_config(self, config):
         self.logger.info("Preprocessing config and settings necessary defaults...")
         config.setdefault('projects_dir', './projects')
+
         network = config.setdefault('network', {})
         network.setdefault('cidr', 'auto')
         network.setdefault('cidr_template', '10.X.100.0/24')
         network.setdefault('ext_net_name', 'ext-net')
 
+        vm_mgmt = config.setdefault('vm_management', {})
+        vm_mgmt.setdefault('default_image_name', 'Ubuntu 14.04.2_20150505')
+        vm_mgmt.setdefault('default_vm_flavor', 'm1.medium')
+        vm_mgmt.setdefault('hosts_startup_timeout', 600)
+        vm_mgmt.setdefault('terminate_vm_poll', 2)
 
+        hosts = config.setdefault('hosts', [])
+        for host in hosts:
+            host.setdefault('count', 1)
+            cloud_vars = host.setdefault('cloud_vars', [])
+            for cv in cloud_vars:
+                cv.setdefault('index', 'all')

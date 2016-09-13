@@ -24,7 +24,7 @@ class OpenStackDriver:
 
         self.driver = get_driver(Provider.OPENSTACK)(openstack_settings['username'], openstack_settings['password'],
                                                      ex_tenant_name=openstack_settings['project_name'],
-                                                     ex_force_auth_url=openstack_settings['auth_url_base']+'/tokens',
+                                                     ex_force_auth_url=openstack_settings['auth_url_base'] + '/tokens',
                                                      ex_force_auth_version='2.0_password',
                                                      ex_force_service_region=openstack_settings['region_name'])
 
@@ -71,7 +71,6 @@ class OpenStackDriver:
         self.create_vms()
 
         self.process_cloud_vars()
-
 
     def cleanup_cluster(self):
         """
@@ -282,7 +281,7 @@ class OpenStackDriver:
             exit(1)
 
         node_sizes = dict((x.name, x) for x in sizes_list)
-        default_image = self.get_image(self.config['default_image'])
+        default_image = self.get_image(self.config['vm_management']['default_image_name'])
 
         hosts = self.config['hosts']
         new_nodes = []
@@ -294,7 +293,12 @@ class OpenStackDriver:
                 if cnt > 1:
                     host_name = host_name + "_" + str(i + 1)
 
-                size = node_sizes[host['vm_flavor']] or node_sizes["m1.medium"]
+                flavor = host.get('vm_flavor', self.config['vm_management']['default_vm_flavor'])
+                size = node_sizes[flavor]
+                if not size:
+                    self.logger.error("Flavor '%s' doesn't exist. Skipping creating host '%s'", flavor, host_name)
+                    continue
+
                 image = default_image
                 if 'image' in host:
                     image = self.get_image(host['image'])
@@ -310,7 +314,8 @@ class OpenStackDriver:
 
         self.logger.debug("Waiting for new nodes to start up...")
         start_time = time.time()
-        self.driver.wait_until_running(new_nodes, wait_period=5, timeout=self.config['hosts_startup_timeout'])
+        self.driver.wait_until_running(new_nodes, wait_period=5,
+                                       timeout=self.config['vm_management']['hosts_startup_timeout'])
         self.logger.debug("Startup for %s nodes took %s seconds", len(new_nodes), (time.time() - start_time))
 
     def get_image(self, name):
@@ -352,7 +357,7 @@ class OpenStackDriver:
         wait_more = True
         while wait_more:
             self.logger.debug("Still waiting for nodes to terminate...")
-            time.sleep(self.config['terminate_vm_poll'])
+            time.sleep(self.config['vm_management']['terminate_vm_poll'])
             nodes = self.driver.list_nodes()
             wait_more = any(node.name in node_names for node in nodes)
 
@@ -393,7 +398,7 @@ class OpenStackDriver:
         if index == 'all':
             index = range(0, cnt)
         else:
-            index = range(index, index+1)
+            index = range(index, index + 1)
 
         for i in index:
             floating_ip_address = self.driver.ex_create_floating_ip(ip_pool=ip_pool)
