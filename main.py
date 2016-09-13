@@ -9,6 +9,7 @@ from clilib.cloud_cli import CloudCLI
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger().addHandler(logging.FileHandler("cloud_cli.log"))
     logger = logging.getLogger(__name__)
 
     allowed_actions = ["create", "cleanup", "prepare_ansible", "run_ansible"]
