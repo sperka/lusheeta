@@ -76,3 +76,9 @@ class CloudCLI:
     def preprocess_config(self, config):
         self.logger.info("Preprocessing config and settings necessary defaults...")
         config.setdefault('projects_dir', './projects')
+        network = config.setdefault('network', {})
+        network.setdefault('cidr', 'auto')
+        network.setdefault('cidr_template', '10.X.100.0/24')
+        network.setdefault('ext_net_name', 'ext-net')
+
+

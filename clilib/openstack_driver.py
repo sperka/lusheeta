@@ -159,10 +159,10 @@ class OpenStackDriver:
         network = self.get_network()
         if not network:
             self.logger.info("Creating network '%s'", self._network_name)
-            cidr = self.config['network_cidr']
+            cidr = self.config['network']['cidr']
 
             if cidr == "auto":
-                self.logger.debug("CIDR not set explicitly, generating next CIDR based on 'network_cidr_template'")
+                self.logger.debug("CIDR not set explicitly, generating next CIDR based on 'network.cidr_template'")
                 cidr = self.get_next_cidr()
                 self.logger.debug("Next CIDR: '%s'", cidr)
 
@@ -176,7 +176,7 @@ class OpenStackDriver:
                 cidr=cidr,
                 gateway_ip=gateway_ip
             )
-            ext_net_network = self.network_driver.find_network(self.config['ext_net_name'])
+            ext_net_network = self.network_driver.find_network(self.config['network']['ext_net_name'])
             if ext_net_network:
                 router = self.network_driver.create_router(
                     name=self._router_name,
@@ -187,7 +187,7 @@ class OpenStackDriver:
                 self.network_driver.router_add_interface(router, subnet_id=subnet.id, port_id=port.id)
             else:
                 self.logger.error("External gateway '%s' not found. Can't connect router to the external network...",
-                                  self.config['ext_net_name'])
+                                  self.config['network']['ext_net_name'])
 
         else:
             self.logger.warn("A network with the name '%s' already exists!"
@@ -195,7 +195,7 @@ class OpenStackDriver:
                              "Cluster creation doesn't continue. Quitting...", self._network_name)
 
     def get_next_cidr(self):
-        cidr_template = self.config['network_cidr_template']
+        cidr_template = self.config['network']['cidr_template']
         subnets = list(self.network_driver.subnets())
 
         cidr_ctr = len(subnets)
