@@ -31,10 +31,10 @@ if __name__ == "__main__":
     verbose_level = args.verbose
     project_name = args.project[0]
 
-    # overwrite config.project with the passed value
+    # overwrite config.project with the passed value (may be different)
     cli_config['project'] = project_name
 
-    logger.debug("Starting CPSWTNG CLOUD CLI...")
+    logger.info("Starting Lusheeta CLI...")
     logger.debug("Allowed actions for the CLI: %s", allowed_actions)
     logger.debug("Passed args:\t"
                  "action = '%s'\t"

@@ -71,7 +71,8 @@ This configuration file is the main configuration for the CLI tool. You can set 
  * `hosts` _array_ - the section to setup host configs. Each array item is a `host` _dict_, which is a configuration
                      for one host
     * `name` _required_ - the name of the host
-    * `vm_flavor` _optional_ - the name of the flavor to spin up a vm. This property overrides `vm_management.default_vm_flavor`
+    * `vm_flavor` _optional_ - the name of the flavor to spin up a vm. This property overrides
+                                `vm_management.default_vm_flavor`
     * `count` _optional_ - the number of vms to spin up with these properties. If this field is missing, default
                         value of `1` will be used.
     * `image_name` _optional_ - the name of the image to spin up a vm. This property overrides

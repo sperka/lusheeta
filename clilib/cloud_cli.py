@@ -67,6 +67,9 @@ class CloudCLI:
 
     def prepare_ansible(self):
         """Prepare required ansible files: inventory, ssh.config, ansible.cfg"""
+
+
+
         return
 
     def run_ansible(self):

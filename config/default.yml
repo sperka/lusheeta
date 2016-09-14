@@ -70,8 +70,8 @@ hosts:
           - hostname: host_name
 
 ansible:
-  ansible_dir: ~/projects/c2wt/repos/cpswtng-ansible/
+  ansible_dir: ./example/ansible
   playbook: playbooks/setup_mesos_cluster.yml
-  inventory_template: templates/ansible_inventory.j2
-  ssh_config_template: templates/ssh.config.j2
-  ansible_cfg_template: templates/ansible.cfg.j2
+  inventory_template: ./example/templates/ansible_inventory.j2
+  ssh_config_template: ./example/templates/ssh.config.j2
+  ansible_cfg_template: ./example/templates/ansible.cfg.j2
