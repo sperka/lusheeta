@@ -27,7 +27,7 @@ class CloudCLI:
 
         self.logger.info("Instantiating class '%s' for platform '%s'", platform['class_name'], platform_name)
         _PLATFORM_CLASS = utils.import_platform_class(platform['module_name'], platform['class_name'])
-        self.driver = _PLATFORM_CLASS(config, project_name)
+        self.platform_driver = _PLATFORM_CLASS(config, project_name)
 
     def run(self):
         action_fn = getattr(self, self.action)
@@ -57,12 +57,12 @@ class CloudCLI:
         utils.write_yaml_config(os.path.join(project_path, "config.yml"), self.config)
 
         # 3
-        self.driver.create_cluster()
+        self.platform_driver.create_cluster()
         return
 
     def cleanup(self):
         """Cleanup the cluster from the cloud"""
-        self.driver.cleanup_cluster()
+        self.platform_driver.cleanup_cluster()
         return
 
     def prepare_ansible(self):

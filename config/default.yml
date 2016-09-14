@@ -1,30 +1,37 @@
 ---
-# defaults for cpswtng-cloud-cli
+# defaults for lusheeta-cli
 
-project: cpswtngdefaultproject
+# project settings
+project: lusheetaproject # cli argument overwrites this
 projects_dir: ./projects
 
 # currently supported platforms: [ "openstack" ]
 platform: openstack
 
+# network settings
 network:
-  cidr: auto # 10.4.100.0/24
+  cidr: auto # or 10.4.100.0/24
   cidr_template: 10.X.100.0/24
   ext_net_name: 'ext-net'
 
-# ### HOSTS related information ###
-
+# VMs
 vm_management:
   default_image_name: 'Ubuntu 14.04.2_20150505'
   default_vm_flavor: 'm1.medium'
   hosts_startup_timeout: 600
   terminate_vm_poll: 2
 
-# "hosts" key indicates the array of host descriptors
+# host settings
 hosts:
   - name: bastion_host
+
+    # overrides default_vm_flavor
     vm_flavor: m1.small
-    count: 1 # optional, default value is 1
+
+    # optional, default value is 1
+    count: 1
+
+    # overrides default_image_name
     image_name: 'Ubuntu 14.04.2_20150505'
     cloud_vars:
       - index: 0
@@ -69,6 +76,7 @@ hosts:
           - ansible_host: private_ip
           - hostname: host_name
 
+# ansible settings
 ansible:
   ansible_dir: ./example/ansible
   playbook: playbooks/setup_mesos_cluster.yml
