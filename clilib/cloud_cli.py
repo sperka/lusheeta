@@ -2,6 +2,7 @@ import logging
 import os
 import time
 import utils
+from ansible_mgr import AnsibleManager
 
 
 class CloudCLI:
@@ -25,9 +26,16 @@ class CloudCLI:
         platform = platforms[platform_name]
         config['platform_settings'] = platform
 
+        self.project_path = os.path.join(self.config['projects_dir'], self.config['project'])
+        # save it to config, we'll need it later
+        config['project_path'] = self.project_path
+
         self.logger.info("Instantiating class '%s' for platform '%s'", platform['class_name'], platform_name)
         _PLATFORM_CLASS = utils.import_platform_class(platform['module_name'], platform['class_name'])
         self.platform_driver = _PLATFORM_CLASS(config, project_name)
+
+        # initialize ansible manager
+        self.ansible_manager = AnsibleManager(config, project_name)
 
     def run(self):
         action_fn = getattr(self, self.action)
@@ -41,20 +49,19 @@ class CloudCLI:
             3. Run driver's create_cluster method
         """
         # 1
-        project_path = os.path.join(self.config['projects_dir'], self.config['project'])
-        self.logger.info("Creating project dir '%s'", project_path)
-        if os.path.exists(project_path):
+        self.logger.info("Creating project dir '%s'", self.project_path)
+        if os.path.exists(self.project_path):
             backup_path = os.path.join(self.config['projects_dir'],
                                        self.config['project'] + "-backup-" + time.strftime('%Y%m%d-%I%M%S'))
             self.logger.warn("Project directory exists with the same name ('%s'). Backing up content into '%s'",
-                             project_path, backup_path)
-            os.rename(project_path, backup_path)
+                             self.project_path, backup_path)
+            os.rename(self.project_path, backup_path)
 
-        os.makedirs(project_path)
+        os.makedirs(self.project_path)
 
         # 2
         self.logger.debug("Saving current config to project dir...")
-        utils.write_yaml_config(os.path.join(project_path, "config.yml"), self.config)
+        utils.write_yaml_config(os.path.join(self.project_path, "config.yml"), self.config)
 
         # 3
         self.platform_driver.create_cluster()
@@ -67,10 +74,7 @@ class CloudCLI:
 
     def prepare_ansible(self):
         """Prepare required ansible files: inventory, ssh.config, ansible.cfg"""
-
-
-
-        return
+        self.ansible_manager.prepare_files()
 
     def run_ansible(self):
         """Run the ansible setup on the cluster in the cloud"""
@@ -101,4 +105,4 @@ class CloudCLI:
         ansible = config.setdefault('ansible', {})
         ansible.setdefault('ansible_dir', '../ansible/')
         ansible.setdefault('playbook', 'playbooks/setup_mesos_cluster.yml')
-        ansible.setdefault('inventory_template', 'inventory/cluster_template.j2')
+        ansible.setdefault('templates_path', './example/templates')
