@@ -2,17 +2,17 @@
 #
 
 #
-# ssh.config for {% project_name %}
+# ssh.config for {{ project_name }}
 #
-Host {% private_ip_address_space %}
+Host {{ private_ip_address_space }}
 User            ubuntu
-ProxyCommand    ssh -F {% ssh_config_path %} {% bastion_public_ip %} nc %h %p
-IdentityFile    {% ssh_private_key_path %}
+ProxyCommand    ssh -F {{ ssh_config_path }} {{ bastion_public_ip }} nc %h %p
+IdentityFile    {{ ssh_private_key_path }}
 
-Host {% bastion_public_ip %}
+Host {{ bastion_public_ip }}
 User  ubuntu
-IdentityFile    {% ssh_private_key_path %}
+IdentityFile    {{ ssh_private_key_path }}
 ForwardAgent    yes
 ControlMaster   auto
-ControlPath     {% ssh_control_path %}
+ControlPath     {{ ssh_control_path }}
 ControlPersist  5m

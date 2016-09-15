@@ -80,6 +80,7 @@ hosts:
 ansible:
   ansible_dir: ./example/ansible
   playbook: playbooks/setup_mesos_cluster.yml
-  inventory_template: ./example/templates/ansible_inventory.j2
-  ssh_config_template: ./example/templates/ssh.config.j2
-  ansible_cfg_template: ./example/templates/ansible.cfg.j2
+  templates_path: ./example/templates
+  inventory_template: ansible_inventory.j2 # optional
+  ssh_config_template: ssh.config.j2 # optional
+  ansible_cfg_template: ansible.cfg.j2 # optional

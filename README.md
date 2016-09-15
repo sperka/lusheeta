@@ -100,6 +100,7 @@ This configuration file is the main configuration for the CLI tool. You can set 
  * `ansible` _dict_ - ansible settings to setup the software infrastructure
     * `ansible_dir` - the path to directory where your ansible project files reside
     * `playbook` - relative path to the playbook to run your setup
+    * `templates_path` - path to folder that contains template files
     * `inventory_template` _optional_ - a _jinja2_ template file for your inventory to use
     * `ssh_config_template` _optional_ - a _jinja2_ template file for the `ssh.config` file
     * `ansible_cfg_template` _optional_ - a _jinja2_ template file for the `ansible.cfg` file
