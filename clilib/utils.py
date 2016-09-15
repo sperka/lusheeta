@@ -30,7 +30,7 @@ def import_platform_class(mod_name, class_name):
     return mod
 
 
-def save_key(key, target_path):
+def save_string_to_file(key, target_path):
     with open(target_path, "wb") as file_stream:
         file_stream.write(key)
 

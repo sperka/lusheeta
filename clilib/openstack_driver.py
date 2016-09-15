@@ -247,8 +247,8 @@ class OpenStackDriver:
         self.logger.info("Creating ssh key pair %s and saving to %s", self._ssh_key, project_path)
 
         key_pair = self.driver.create_key_pair(name=self._ssh_key)
-        utils.save_key(key_pair.private_key, os.path.join(project_path, self._ssh_key))
-        utils.save_key(key_pair.public_key, os.path.join(project_path, self._ssh_key + ".pub"))
+        utils.save_string_to_file(key_pair.private_key, os.path.join(project_path, self._ssh_key))
+        utils.save_string_to_file(key_pair.public_key, os.path.join(project_path, self._ssh_key + ".pub"))
 
     def cleanup_ssh_key_pair(self):
         self.logger.info("Cleaning up ssh key pair %s", self._ssh_key)
@@ -290,7 +290,7 @@ class OpenStackDriver:
         hosts = self.config['hosts']
         new_nodes = []
         for host in hosts:
-            cnt = host['count'] or 1
+            cnt = host['count']
 
             for i in range(0, cnt):
                 host_name = self.project_name + "-" + host['name']
@@ -342,7 +342,7 @@ class OpenStackDriver:
         # self.iterate_through_hosts(gather_names)
 
         for host in self.config['hosts']:
-            cnt = host['count'] or 1
+            cnt = host['count']
             for i in range(0, cnt):
                 host_name = self.project_name + "-" + host['name']
                 if cnt > 1:
@@ -371,7 +371,7 @@ class OpenStackDriver:
         nodes = self.driver.list_nodes()
 
         for host in self.config['hosts']:
-            cnt = host['count'] or 1
+            cnt = host['count']
 
             if 'cloud_vars' in host:
                 for cloud_var in host['cloud_vars']:
@@ -398,7 +398,7 @@ class OpenStackDriver:
         ip_pool = OpenStackDriver.ip_pools[0] if len(OpenStackDriver.ip_pools) > 0 else None
         if ip_pool:
             ip_pool = ip_pool.name
-        cnt = host['count'] or 1
+        cnt = host['count']
         if index == 'all':
             index = range(0, cnt)
         else:
@@ -418,7 +418,7 @@ class OpenStackDriver:
 
     def iterate_through_hosts(self, action):
         for host in self.config['hosts']:
-            cnt = host['count'] or 1
+            cnt = host['count']
 
             for i in range(0, cnt):
                 host_name = self.project_name + "-" + host['name']
@@ -431,7 +431,7 @@ class OpenStackDriver:
         nodes = self.driver.list_nodes()
         node_names = []
         for host in self.config['hosts']:
-            cnt = host['count'] or 1
+            cnt = host['count']
 
             for i in range(0, cnt):
                 host_name = self.project_name + "-" + host['name']
