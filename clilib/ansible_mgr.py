@@ -70,8 +70,10 @@ class AnsibleManager:
                                 sub_fn_name = self.substitution_rules['item_vars'].get(item_var_key)
                                 if sub_fn_name:
                                     sub_fn = getattr(self, sub_fn_name)
-                                    p = locals()
-                                    sub_fn(self, **p)
+                                    # make a copy and remove "additional" 'self' key in order to pass the dict
+                                    _locals = dict(locals())
+                                    del _locals['self']
+                                    sub_fn(**_locals)
                                 inventory_item[item_var_key] = item_var[item_var_key]
 
                     # check group_vars -- entries with the proper index will be added
@@ -92,7 +94,6 @@ class AnsibleManager:
         x = inventory_template.render(template_vars)
         print x
 
-    @classmethod
-    def substitute_ansible_host(cls, **kwargs):
-        for (k,v) in kwargs.items():
+    def substitute_ansible_host(self, **kwargs):
+        for (k, v) in kwargs.items():
             print "%s -- %s" % (k, v)
