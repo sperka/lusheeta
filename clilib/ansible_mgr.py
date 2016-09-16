@@ -17,6 +17,14 @@ class AnsibleManager:
             self.logger.error("No ansible.templates_path set. Can't continue...")
             exit(1)
 
+        self.substitution_rules = {
+            'item_vars': {
+                'ansible_host': 'substitute_ansible_host',
+                'hostname': 'substitute_host_name'
+            },
+            'group_vars': {}
+        }
+
     def prepare_files(self):
         ansible_settings = self.config['ansible']
         inventory_template_path = ansible_settings.get('inventory_template')
@@ -59,6 +67,11 @@ class AnsibleManager:
                     if item_vars:
                         for item_var in item_vars:
                             for item_var_key in item_var:
+                                sub_fn_name = self.substitution_rules['item_vars'].get(item_var_key)
+                                if sub_fn_name:
+                                    sub_fn = getattr(self, sub_fn_name)
+                                    p = locals()
+                                    sub_fn(self, **p)
                                 inventory_item[item_var_key] = item_var[item_var_key]
 
                     # check group_vars -- entries with the proper index will be added
@@ -78,3 +91,8 @@ class AnsibleManager:
 
         x = inventory_template.render(template_vars)
         print x
+
+    @classmethod
+    def substitute_ansible_host(cls, **kwargs):
+        for (k,v) in kwargs.items():
+            print "%s -- %s" % (k, v)
