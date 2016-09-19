@@ -30,9 +30,9 @@ def import_platform_class(mod_name, class_name):
     return mod
 
 
-def save_string_to_file(key, target_path):
+def save_string_to_file(str, target_path):
     with open(target_path, "wb") as file_stream:
-        file_stream.write(key)
+        file_stream.write(str)
 
 
 def static_vars(**kwargs):

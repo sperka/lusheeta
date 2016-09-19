@@ -70,8 +70,8 @@ hosts:
     ansible_settings:
       - ansible_group: mesos_agent
         group_vars:
-          - index: 0
-            useAsMarathonHost: true
+        #  - index: 0
+        #    useAsMarathonHost: true
         item_vars:
           - ansible_host: private_ip
           - hostname: host_name

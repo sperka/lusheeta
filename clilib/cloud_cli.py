@@ -70,15 +70,18 @@ class CloudCLI:
     def cleanup(self):
         """Cleanup the cluster from the cloud"""
         self.platform_driver.cleanup_cluster()
-        return
 
     def prepare_ansible(self):
         """Prepare required ansible files: inventory, ssh.config, ansible.cfg"""
-        self.ansible_manager.prepare_files()
+        nodes = self.list_nodes()
+        self.ansible_manager.prepare_files(nodes)
 
     def run_ansible(self):
         """Run the ansible setup on the cluster in the cloud"""
         return
+
+    def list_nodes(self):
+        return self.platform_driver.list_nodes()
 
     def preprocess_config(self, config):
         self.logger.info("Preprocessing config and settings necessary defaults...")

@@ -451,3 +451,6 @@ class OpenStackDriver:
 
                     self.logger.info("Deleting floating ip '%s'", ip_to_detach)
                     self.driver.ex_delete_floating_ip(floating_ips_dict[ip_to_detach])
+
+    def list_nodes(self):
+        return self.driver.list_nodes()
