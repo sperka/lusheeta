@@ -96,3 +96,6 @@ ENV/
 
 # project folder
 projects/
+
+# ansible
+*.retry

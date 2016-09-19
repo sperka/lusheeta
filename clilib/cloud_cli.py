@@ -78,6 +78,7 @@ class CloudCLI:
 
     def run_ansible(self):
         """Run the ansible setup on the cluster in the cloud"""
+        self.ansible_manager.run_ansible_setup()
         return
 
     def list_nodes(self):

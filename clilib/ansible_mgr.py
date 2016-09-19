@@ -1,5 +1,7 @@
 import logging
 import os
+import re
+import subprocess
 import utils
 from jinja2 import Environment, FileSystemLoader
 
@@ -54,6 +56,17 @@ class AnsibleManager:
         else:
             self.logger.warn("ansible.ansible_cfg_template not set. Skipping ansible.cfg file generation...")
 
+    #
+
+    #
+    def run_ansible_setup(self):
+        ansible_dir = self.config['ansible']['ansible_dir']
+        playbook_path = os.path.abspath(os.path.join(ansible_dir, self.config['ansible']['playbook']))
+        project_path = os.path.abspath(self.config['project_path'])
+
+        inventory_file = os.path.abspath(os.path.join(project_path, 'ansible_inventory'))
+
+        subprocess.call(['ansible-playbook', playbook_path, '-i', inventory_file, '-vv'], cwd=project_path)
     #
 
     #
