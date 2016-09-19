@@ -166,6 +166,13 @@ class AnsibleManager:
             self.logger.error("Bastion host doesn't have public_ips. Can't generate ssh.config...")
             return
 
+        if len(node.private_ips) > 0:
+            bastion_private_ip = node.private_ips[0]
+            template_vars['private_ip_address_space'] = re.sub(r'(\d+\.\d+\.\d+\.)\d+', r'\1*', bastion_private_ip)
+        else:
+            self.logger.error("Bastion host doesn't have private_ips. Can't generate ssh.config...")
+            return
+
         ssh_config_file_content = ssh_config_template.render(template_vars)
 
         target = os.path.join(project_path, ssh_config_filename)
