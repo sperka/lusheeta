@@ -6,7 +6,10 @@ from jinja2 import Environment, FileSystemLoader
 _SPACES = "   "
 
 
+#
 class AnsibleManager:
+
+    #
     def __init__(self, config, project_name):
         self.logger = logging.getLogger(__name__)
         self.config = config
@@ -26,7 +29,9 @@ class AnsibleManager:
             },
             'group_vars': {}
         }
+    #
 
+    #
     def prepare_files(self, cloud_nodes):
         ansible_settings = self.config['ansible']
         inventory_template_path = ansible_settings.get('inventory_template')
@@ -35,6 +40,14 @@ class AnsibleManager:
         else:
             self.logger.warn("ansible.inventory_template not set. Skipping inventory file generation...")
 
+        ssh_config_template_path = ansible_settings.get('ssh_config_template');
+        if ssh_config_template_path:
+            self._generate_ssh_config_file(cloud_nodes)
+        else:
+            self.logger.warn("ansible.ssh_config_template not set. Skipping ssh.config file generation...")
+    #
+
+    #
     def _generate_inventory_file(self, cloud_nodes):
         project_path = self.config['project_path']
         inventory_template = self.j2_env.get_template(self.config['ansible']['inventory_template'])
@@ -103,7 +116,46 @@ class AnsibleManager:
         inventory_file_content = inventory_template.render(template_vars)
         project_path = self.config['project_path']
         utils.save_string_to_file(inventory_file_content, os.path.join(project_path, 'ansible_inventory'))
+    #
 
+    #
+    def _generate_ssh_config_file(self, cloud_nodes):
+        project_path = self.config['project_path']
+        ssh_config_filename = 'ssh.config'
+        ssh_config_template = self.j2_env.get_template(self.config['ansible']['ssh_config_template'])
+        ssh_key_name = self.project_name + '_ssh'
+
+        template_vars = {
+            'project_name': self.project_name,
+            'ssh_config_path': os.path.join(project_path, ssh_config_filename),
+            'ssh_private_key_path': os.path.join(project_path, ssh_key_name),
+            'ssh_control_path': '~/.ssh/ansible-%r@%h:%p'
+        }
+
+        hosts = self.config['hosts']
+        bastion_host = next(host for host in hosts if host.get('type') == 'bastion')
+        if not bastion_host:
+            self.logger.error("No bastion host found in the default config. Skipping ssh.config generation...")
+            return
+
+        host_name = self.project_name + "-" + bastion_host['name']
+        node = next(node for node in cloud_nodes if node.name == host_name)
+
+        if len(node.public_ips) > 0:
+            template_vars['bastion_public_ip'] = node.public_ips[0]
+        else:
+            self.logger.error("Bastion host doesn't have public_ips. Can't generate ssh.config...")
+            return
+
+        ssh_config_file_content = ssh_config_template.render(template_vars)
+        utils.save_string_to_file(ssh_config_file_content, os.path.join(project_path, ssh_config_filename))
+    #
+
+    # ---------------------------------------------------------------------------------------------------------------- #
+    # ### Substitution methods ###
+    # ---------------------------------------------------------------------------------------------------------------- #
+
+    #
     def substitute_ansible_host(self, **kwargs):
         _locals = kwargs
         ans_host_val = _locals['item_var']['ansible_host']
@@ -144,9 +196,12 @@ class AnsibleManager:
 
         self.logger.debug("Substituting %s host's item_var.ansible_host value from '%s' to '%s'", host_name, ans_host_val, ip)
         return ip
+    #
 
+    #
     def substitute_host_name(self, **kwargs):
         _locals = kwargs
         host_name = _locals['inventory_host_name']
         self.logger.debug("Substituting 'hostname' to '%s'", host_name)
         return host_name
+    #

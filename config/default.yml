@@ -24,12 +24,14 @@ vm_management:
 # host settings
 hosts:
   - name: bastion_host
+    # special parameter for 'bastion' type
+    type: bastion
 
     # overrides default_vm_flavor
     vm_flavor: m1.small
 
     # optional, default value is 1
-    count: 1
+    count: 1 # for type=bastion, this must be 1
 
     # overrides default_image_name
     image_name: 'Ubuntu 14.04.2_20150505'
