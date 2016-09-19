@@ -8,7 +8,6 @@ _SPACES = "   "
 
 #
 class AnsibleManager:
-
     #
     def __init__(self, config, project_name):
         self.logger = logging.getLogger(__name__)
@@ -29,6 +28,7 @@ class AnsibleManager:
             },
             'group_vars': {}
         }
+
     #
 
     #
@@ -45,6 +45,13 @@ class AnsibleManager:
             self._generate_ssh_config_file(cloud_nodes)
         else:
             self.logger.warn("ansible.ssh_config_template not set. Skipping ssh.config file generation...")
+
+        ansible_cfg_template_path = ansible_settings.get('ansible_cfg_template')
+        if ansible_cfg_template_path:
+            self._generate_ansible_cfg_file()
+        else:
+            self.logger.warn("ansible.ansible_cfg_template not set. Skipping ansible.cfg file generation...")
+
     #
 
     #
@@ -116,6 +123,7 @@ class AnsibleManager:
         inventory_file_content = inventory_template.render(template_vars)
         project_path = self.config['project_path']
         utils.save_string_to_file(inventory_file_content, os.path.join(project_path, 'ansible_inventory'))
+
     #
 
     #
@@ -149,6 +157,27 @@ class AnsibleManager:
 
         ssh_config_file_content = ssh_config_template.render(template_vars)
         utils.save_string_to_file(ssh_config_file_content, os.path.join(project_path, ssh_config_filename))
+
+    #
+
+    #
+    def _generate_ansible_cfg_file(self):
+        project_path = self.config['project_path']
+        ansible_cfg_filename = 'ansible.cfg'
+        ssh_config_filename = 'ssh.config'
+        ansible_cfg_template = self.j2_env.get_template(self.config['ansible']['ansible_cfg_template'])
+        ssh_key_name = self.project_name + '_ssh'
+
+        template_vars = {
+            'ansible_dir': self.config['ansible']['ansible_dir'],
+            'ssh_config_path': os.path.join(project_path, ssh_config_filename),
+            'ssh_private_key_path': os.path.join(project_path, ssh_key_name),
+            'ssh_control_path': '~/.ssh/ansible-%r@%h:%p'
+        }
+
+        ansible_cfg_file_content = ansible_cfg_template.render(template_vars)
+        utils.save_string_to_file(ansible_cfg_file_content, os.path.join(project_path, ansible_cfg_filename))
+
     #
 
     # ---------------------------------------------------------------------------------------------------------------- #
@@ -194,8 +223,10 @@ class AnsibleManager:
                     host_name)
                 return ans_host_val
 
-        self.logger.debug("Substituting %s host's item_var.ansible_host value from '%s' to '%s'", host_name, ans_host_val, ip)
+        self.logger.debug("Substituting %s host's item_var.ansible_host value from '%s' to '%s'", host_name,
+                          ans_host_val, ip)
         return ip
+
     #
 
     #
@@ -204,4 +235,4 @@ class AnsibleManager:
         host_name = _locals['inventory_host_name']
         self.logger.debug("Substituting 'hostname' to '%s'", host_name)
         return host_name
-    #
+        #
