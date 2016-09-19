@@ -33,6 +33,8 @@ class AnsibleManager:
 
     #
     def prepare_files(self, cloud_nodes):
+        self.logger.info("Preparing ansible files...")
+
         ansible_settings = self.config['ansible']
         inventory_template_path = ansible_settings.get('inventory_template')
         if inventory_template_path:
@@ -57,7 +59,10 @@ class AnsibleManager:
     #
     def _generate_inventory_file(self, cloud_nodes):
         project_path = self.config['project_path']
-        inventory_template = self.j2_env.get_template(self.config['ansible']['inventory_template'])
+        tpl_file = self.config['ansible']['inventory_template']
+        inventory_template = self.j2_env.get_template(tpl_file)
+
+        self.logger.info("Generating ansible inventory file from template '%s'...", tpl_file)
 
         hosts = self.config['hosts']
 
@@ -122,7 +127,10 @@ class AnsibleManager:
 
         inventory_file_content = inventory_template.render(template_vars)
         project_path = self.config['project_path']
-        utils.save_string_to_file(inventory_file_content, os.path.join(project_path, 'ansible_inventory'))
+
+        target = os.path.join(project_path, 'ansible_inventory')
+        self.logger.info("Saving ansible inventory file to '%s'", target)
+        utils.save_string_to_file(inventory_file_content, target)
 
     #
 
@@ -130,13 +138,16 @@ class AnsibleManager:
     def _generate_ssh_config_file(self, cloud_nodes):
         project_path = self.config['project_path']
         ssh_config_filename = 'ssh.config'
-        ssh_config_template = self.j2_env.get_template(self.config['ansible']['ssh_config_template'])
+        tpl_file = self.config['ansible']['ssh_config_template']
+        ssh_config_template = self.j2_env.get_template(tpl_file)
         ssh_key_name = self.project_name + '_ssh'
+
+        self.logger.info("Generating ssh.config file from template '%s'...", tpl_file)
 
         template_vars = {
             'project_name': self.project_name,
-            'ssh_config_path': os.path.join(project_path, ssh_config_filename),
-            'ssh_private_key_path': os.path.join(project_path, ssh_key_name),
+            'ssh_config_path': os.path.abspath(os.path.join(project_path, ssh_config_filename)),
+            'ssh_private_key_path': os.path.abspath(os.path.join(project_path, ssh_key_name)),
             'ssh_control_path': '~/.ssh/ansible-%r@%h:%p'
         }
 
@@ -156,7 +167,10 @@ class AnsibleManager:
             return
 
         ssh_config_file_content = ssh_config_template.render(template_vars)
-        utils.save_string_to_file(ssh_config_file_content, os.path.join(project_path, ssh_config_filename))
+
+        target = os.path.join(project_path, ssh_config_filename)
+        self.logger.info("Saving ssh.config file to '%s'", target)
+        utils.save_string_to_file(ssh_config_file_content, target)
 
     #
 
@@ -165,18 +179,23 @@ class AnsibleManager:
         project_path = self.config['project_path']
         ansible_cfg_filename = 'ansible.cfg'
         ssh_config_filename = 'ssh.config'
-        ansible_cfg_template = self.j2_env.get_template(self.config['ansible']['ansible_cfg_template'])
+        tpl_file = self.config['ansible']['ansible_cfg_template']
+        ansible_cfg_template = self.j2_env.get_template(tpl_file)
         ssh_key_name = self.project_name + '_ssh'
 
+        self.logger.info("Generating ansible.cfg file from template '%s'...", tpl_file)
+
         template_vars = {
-            'ansible_dir': self.config['ansible']['ansible_dir'],
-            'ssh_config_path': os.path.join(project_path, ssh_config_filename),
-            'ssh_private_key_path': os.path.join(project_path, ssh_key_name),
+            'ansible_dir': os.path.abspath(self.config['ansible']['ansible_dir']),
+            'ssh_config_path': os.path.abspath(os.path.join(project_path, ssh_config_filename)),
+            'ssh_private_key_path': os.path.abspath(os.path.join(project_path, ssh_key_name)),
             'ssh_control_path': '~/.ssh/ansible-%r@%h:%p'
         }
 
         ansible_cfg_file_content = ansible_cfg_template.render(template_vars)
-        utils.save_string_to_file(ansible_cfg_file_content, os.path.join(project_path, ansible_cfg_filename))
+        target = os.path.join(project_path, ansible_cfg_filename)
+        self.logger.info("Saving ansible.cfg file to '%s'...", target)
+        utils.save_string_to_file(ansible_cfg_file_content, target)
 
     #
 
