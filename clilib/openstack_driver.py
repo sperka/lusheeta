@@ -1,5 +1,6 @@
 import logging
 import os
+import stat
 import utils
 import time
 
@@ -259,7 +260,8 @@ class OpenStackDriver:
         self.logger.info("Creating ssh key pair %s and saving to %s", self._ssh_key, project_path)
 
         key_pair = self.driver.create_key_pair(name=self._ssh_key)
-        utils.save_string_to_file(key_pair.private_key, os.path.join(project_path, self._ssh_key))
+        utils.save_string_to_file(key_pair.private_key, os.path.join(project_path, self._ssh_key),
+                                  chmod=(stat.S_IRUSR | stat.S_IWUSR))
         utils.save_string_to_file(key_pair.public_key, os.path.join(project_path, self._ssh_key + ".pub"))
 
     def cleanup_ssh_key_pair(self):

@@ -1,5 +1,5 @@
+import os
 import yaml
-
 
 def load_yaml_config(cfg_file):
     with open(cfg_file, 'r') as cfg_file_stream:
@@ -30,9 +30,11 @@ def import_platform_class(mod_name, class_name):
     return mod
 
 
-def save_string_to_file(str, target_path):
+def save_string_to_file(str, target_path, chmod=None):
     with open(target_path, "wb") as file_stream:
         file_stream.write(str)
+    if chmod:
+        os.chmod(target_path, chmod)
 
 
 def static_vars(**kwargs):
