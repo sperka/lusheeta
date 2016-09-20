@@ -1,6 +1,7 @@
 import os
 import yaml
 
+
 def load_yaml_config(cfg_file):
     with open(cfg_file, 'r') as cfg_file_stream:
         config_obj = yaml.load(cfg_file_stream)
