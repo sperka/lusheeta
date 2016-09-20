@@ -129,8 +129,20 @@ class OpenStackDriver:
                 self._sec_group_name, "Security group for project '" + self.project_name + "'")
 
             self.logger.info("Creating security group rules for '%s'", self._sec_group_name)
-            self.driver.ex_create_security_group_rule(sg, 'tcp', 1, 65535, source_security_group=sg)
-            self.driver.ex_create_security_group_rule(sg, 'udp', 1, 65535, source_security_group=sg)
+            # self.driver.ex_create_security_group_rule(sg, 'tcp', 1, 65535, source_security_group=sg)
+            # self.driver.ex_create_security_group_rule(sg, 'udp', 1, 65535, source_security_group=sg)
+            self.network_driver.create_security_group_rule(direction="ingress",
+                                                           # description="Ingress TCP rule for %s" % self._sec_group_name,
+                                                           ethertype="IPv4",
+                                                           port_range_min=1, port_range_max=65535, protocol="tcp",
+                                                           security_group_id=sg.id)
+
+            self.network_driver.create_security_group_rule(direction="egress",
+                                                           # description="Egress TCP rule for %s" % self._sec_group_name,
+                                                           ethertype="IPv4",
+                                                           port_range_min=1, port_range_max=65535, protocol="tcp",
+                                                           security_group_id=sg.id)
+
         else:
             self.logger.warn("A security group with the name '%s' already exists! "
                              "Be sure you used a unique project name! "
@@ -428,6 +440,8 @@ class OpenStackDriver:
                 action(host_name)
 
     def disassociate_floating_ips(self):
+        self.logger.info("Disassociating public ips from VMs...")
+
         nodes = self.driver.list_nodes()
         node_names = []
         for host in self.config['hosts']:
