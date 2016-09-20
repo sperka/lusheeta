@@ -101,7 +101,7 @@ class OpenStackDriver:
     def check_available_resources(self):
         self.logger.warn("'check_available_resources' NOT IMPLEMENTED YET")
 
-    def get_security_group(self):
+    def get_security_group(self, include_default=False):
         """
         Retrieves the security group that belongs to the project.
 
@@ -110,10 +110,19 @@ class OpenStackDriver:
         """
         all_security_groups = self.driver.ex_list_security_groups()
         sg = None
+        default = None
         for sec_group in all_security_groups:
+            if include_default and sec_group.name == 'default':
+                default = sec_group
+                continue
+
             if sec_group.name == self._sec_group_name:
                 sg = sec_group
                 break
+
+        if include_default:
+            return [default, sg]
+
         return sg
 
     def create_security_group(self):
@@ -133,13 +142,11 @@ class OpenStackDriver:
             # self.driver.ex_create_security_group_rule(sg, 'tcp', 1, 65535, source_security_group=sg)
             # self.driver.ex_create_security_group_rule(sg, 'udp', 1, 65535, source_security_group=sg)
             self.network_driver.create_security_group_rule(direction="ingress",
-                                                           # description="Ingress TCP rule for %s" % self._sec_group_name,
                                                            ethertype="IPv4",
                                                            port_range_min=1, port_range_max=65535, protocol="tcp",
                                                            security_group_id=sg.id)
 
             self.network_driver.create_security_group_rule(direction="egress",
-                                                           # description="Egress TCP rule for %s" % self._sec_group_name,
                                                            ethertype="IPv4",
                                                            port_range_min=1, port_range_max=65535, protocol="tcp",
                                                            security_group_id=sg.id)
@@ -282,8 +289,8 @@ class OpenStackDriver:
     def create_vms(self):
         self.logger.info("Creating VMs...")
 
-        security_group = self.get_security_group()
-        if not security_group:
+        security_groups = self.get_security_group(include_default=True)
+        if not security_groups:
             self.logger.error("Error retrieving security group %s when creating nodes. Quitting...",
                               self._sec_group_name)
             exit(1)
@@ -326,7 +333,7 @@ class OpenStackDriver:
                                                size=size,
                                                image=image,
                                                ex_keyname=self._ssh_key,
-                                               ex_securitygroups=[security_group],
+                                               ex_security_groups=security_groups,
                                                networks=[network])
                 new_nodes.append(node)
 
