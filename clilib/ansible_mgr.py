@@ -67,6 +67,7 @@ class AnsibleManager:
         inventory_file = os.path.abspath(os.path.join(project_path, 'ansible_inventory'))
 
         subprocess.call(['ansible-playbook', playbook_path, '-i', inventory_file, '-vv'], cwd=project_path)
+
     #
 
     #
@@ -133,6 +134,10 @@ class AnsibleManager:
                             for group_var_key in group_var:
                                 if group_var_key != 'index':
                                     inventory_item[group_var_key] = group_var[group_var_key]
+                        if index == 'counter':
+                            for group_var_key in group_var:
+                                if group_var_key != 'index':
+                                    inventory_item[group_var_key] = str(i+1)
 
                     inventory_line = inventory_host_name + _SPACES + _SPACES.join(
                         ("%s=%s" % (k, v) for (k, v) in inventory_item.items()))

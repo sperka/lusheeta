@@ -420,7 +420,7 @@ class OpenStackDriver:
         if ip_pool:
             ip_pool = ip_pool.name
         cnt = host['count']
-        if index == 'all':
+        if index == 'all' or index == 'counter':
             index = range(0, cnt)
         else:
             index = range(index, index + 1)
