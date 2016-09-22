@@ -3,6 +3,9 @@ import yaml
 
 
 def load_yaml_config(cfg_file):
+    if not isinstance(cfg_file, basestring):
+        cfg_file = cfg_file.name
+
     with open(cfg_file, 'r') as cfg_file_stream:
         config_obj = yaml.load(cfg_file_stream)
     return config_obj
