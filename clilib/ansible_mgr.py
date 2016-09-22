@@ -176,7 +176,11 @@ class AnsibleManager:
             return
 
         host_name = self.project_name + "-" + bastion_host['name']
-        node = next(node for node in cloud_nodes if node.name == host_name)
+        node = next((node for node in cloud_nodes if node.name == host_name), None)
+
+        if not node:
+            self.logger.error("Couldn't find host '%s'. Skipping generating ssh.config file...", host_name)
+            return
 
         if len(node.public_ips) > 0:
             template_vars['bastion_public_ip'] = node.public_ips[0]
@@ -234,7 +238,11 @@ class AnsibleManager:
         ans_host_val = _locals['item_var']['ansible_host']
         nodes = _locals['cloud_nodes']
         host_name = _locals['host_name']
-        node = next(node for node in nodes if node.name == host_name)
+        node = next((node for node in nodes if node.name == host_name), None)
+        if not node:
+            self.logger.error("Can't find node with name '%s'. Skipping item_var.ansible_host substitution...",
+                              host_name)
+            return
 
         if ans_host_val == 'private_ip':
             if len(node.private_ips) > 0:
