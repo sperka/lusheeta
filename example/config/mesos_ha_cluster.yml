@@ -1,0 +1,86 @@
+---
+# Mesos cluster in high-availability mode
+# 'Bastion' is a jump host for the ansible setup
+
+# project settings
+project: mesoshacluster # cli argument overwrites this
+projects_dir: ./projects
+
+platform: openstack
+
+# network settings
+network:
+  cidr: auto
+  cidr_template: 10.X.100.0/24
+  ext_net_name: 'ext-net'
+
+# VMs
+vm_management:
+  default_image_name: 'Ubuntu 14.04.2_20150505'
+  default_vm_flavor: 'm1.medium'
+  hosts_startup_timeout: 600
+  terminate_vm_poll: 4
+
+# host settings
+hosts:
+  # jump host for ansible setup
+  - name: bastion
+    # magic parameter for 'bastion' type
+    type: bastion
+    vm_flavor: m1.small
+    cloud_vars:
+      - index: 0
+        assignPublicIP: true
+    ansible_settings:
+      - ansible_group: bastion
+        item_vars:
+          - ansible_host: public_ip
+          - hostname: host_name
+
+  # 3 standalone zookeeper hosts
+  - name: zookeeper
+    vm_flavor: m1.medium
+    count: 3
+    ansible_settings:
+      - ansible_group: zookeeper
+        group_vars:
+          - index: counter
+            zoo_id: i
+        item_vars:
+          - ansible_host: private_ip
+          - hostname: host_name
+
+  # 3 mesos master in HA mode
+  - name: master
+    vm_flavor: m1.large
+    count: 3
+    cloud_vars:
+      - index: 0
+        assignPublicIP: true
+    ansible_settings:
+      - ansible_group: mesos_master
+        group_vars:
+          - index: 0
+            useAsMarathonHost: true
+        item_vars:
+          - ansible_host: private_ip
+          - hostname: host_name
+
+  # 3 mesos agents in HA mode / for now
+  - name: mesos_agent
+    vm_flavor: m1.large
+    count: 3
+    ansible_settings:
+      - ansible_group: mesos_agent
+        item_vars:
+          - ansible_host: private_ip
+          - hostname: host_name
+
+# ansible settings
+ansible:
+  ansible_dir: ./example/ansible/mesos_cluster
+  playbook: playbooks/setup_mesos_ha_cluster.yml
+  templates_path: ./example/templates
+  inventory_template: ansible_inventory.j2
+  ssh_config_template: ssh.config.j2
+  ansible_cfg_template: ansible.cfg.j2
