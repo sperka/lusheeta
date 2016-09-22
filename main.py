@@ -2,7 +2,7 @@
 
 import argparse
 import logging
-from clilib.utils import *
+import clilib.utils as utils
 
 from clilib.cloud_cli import CloudCLI
 
@@ -27,7 +27,7 @@ if __name__ == "__main__":
     config_file = "config/default.yml"
     if args.config:
         config_file = args.config
-    cli_config = load_yaml_config(config_file)
+    cli_config = utils.load_yaml_config(config_file)
     verbose_level = args.verbose
     project_name = args.project[0]
 
