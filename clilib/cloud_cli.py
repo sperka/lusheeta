@@ -33,14 +33,15 @@ class CloudCLI:
         self.logger.info("Instantiating class '%s' for platform '%s'", platform['class_name'], platform_name)
         _PLATFORM_CLASS = utils.import_platform_class(platform['module_name'], platform['class_name'])
         self.platform_driver = _PLATFORM_CLASS(config, project_name)
+    #
 
-        # initialize ansible manager
-        self.ansible_manager = AnsibleManager(config, project_name)
-
+    #
     def run(self):
         action_fn = getattr(self, self.action)
         action_fn()
+    #
 
+    #
     def create(self):
         """Create a cluster in the cloud
             Steps:
@@ -66,24 +67,34 @@ class CloudCLI:
         # 3
         self.platform_driver.create_cluster()
         return
+    #
 
+    #
     def cleanup(self):
         """Cleanup the cluster from the cloud"""
         self.platform_driver.cleanup_cluster()
+    #
 
+    #
     def prepare_ansible(self):
         """Prepare required ansible files: inventory, ssh.config, ansible.cfg"""
         nodes = self.list_nodes()
-        self.ansible_manager.prepare_files(nodes)
+        AnsibleManager(self.config, self.project_name).prepare_files(nodes)
+    #
 
+    #
     def run_ansible(self):
         """Run the ansible setup on the cluster in the cloud"""
-        self.ansible_manager.run_ansible_setup()
+        AnsibleManager(self.config, self.project_name).run_ansible_setup()
         return
+    #
 
+    #
     def list_nodes(self):
         return self.platform_driver.list_nodes()
+    #
 
+    #
     def preprocess_config(self, config):
         self.logger.info("Preprocessing config and settings necessary defaults...")
         config.setdefault('projects_dir', './projects')
