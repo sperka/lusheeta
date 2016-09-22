@@ -1,3 +1,4 @@
+import logging
 import os
 import yaml
 
@@ -48,3 +49,18 @@ def static_vars(**kwargs):
         return func
     return decorate
 
+
+VERBOSE_LOGGING_LEVEL = {
+    0: logging.ERROR,
+    1: logging.WARN,
+    2: logging.INFO,
+    3: logging.DEBUG
+}
+
+
+def get_log_level(verbose_level):
+    if verbose_level < 0:
+        verbose_level = 0
+    if verbose_level > 3:
+        verbose_level = 3
+    return VERBOSE_LOGGING_LEVEL[verbose_level]

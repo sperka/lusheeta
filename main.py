@@ -8,19 +8,16 @@ from clilib.cloud_cli import CloudCLI
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    logging.getLogger().addHandler(logging.FileHandler("cloud_cli.log"))
-    logger = logging.getLogger(__name__)
-
     allowed_actions = ["create", "cleanup", "prepare_ansible", "run_ansible"]
 
-    # Parse command line arguments
+    # setup command line arguments
     parser = argparse.ArgumentParser(description="CPSWTNG Cloud CLI tool")
     parser.add_argument("-a", "--action", choices=allowed_actions, required=True, help="the action to do")
     parser.add_argument("-c", "--config", type=argparse.FileType('r'), help="path to the configuration file")
     parser.add_argument("-v", "--verbose", help="set verbosity mode", action="count")
     parser.add_argument("project", nargs=1, help="the name of the project")
 
+    # parse command line args
     args = parser.parse_args()
 
     action = args.action
@@ -30,6 +27,11 @@ if __name__ == "__main__":
     cli_config = utils.load_yaml_config(config_file)
     verbose_level = args.verbose
     project_name = args.project[0]
+
+    # setup logger
+    logging.basicConfig(level=utils.get_log_level(verbose_level))
+    logging.getLogger().addHandler(logging.FileHandler("cloud_cli.log"))
+    logger = logging.getLogger(__name__)
 
     # overwrite config.project with the passed value (may be different)
     cli_config['project'] = project_name
