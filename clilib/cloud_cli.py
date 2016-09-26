@@ -1,7 +1,12 @@
+#
+# https://github.com/sperka/lusheeta
+#
+
 import logging
 import os
 import time
 import utils
+
 from ansible_mgr import AnsibleManager
 
 
@@ -31,14 +36,25 @@ class CloudCLI:
         config['project_path'] = self.project_path
 
         self.logger.info("Instantiating class '%s' for platform '%s'", platform['class_name'], platform_name)
-        _PLATFORM_CLASS = utils.import_platform_class(platform['module_name'], platform['class_name'])
+        _PLATFORM_CLASS = utils.import_platform_class(platform['package_name'], platform['module_name'],
+                                                      platform['class_name'])
         self.platform_driver = _PLATFORM_CLASS(config, project_name)
+
     #
 
     #
     def run(self):
+        """
+        This method gets the action method of the current class and runs it.
+        :return: None
+        """
         action_fn = getattr(self, self.action)
+        if not action_fn:
+            self.logger.error("There is no %s action defined in this class. Quitting...", self.action)
+            exit(1)
+
         action_fn()
+
     #
 
     #
@@ -67,12 +83,14 @@ class CloudCLI:
         # 3
         self.platform_driver.create_cluster()
         return
+
     #
 
     #
     def cleanup(self):
         """Cleanup the cluster from the cloud"""
         self.platform_driver.cleanup_cluster()
+
     #
 
     #
@@ -80,6 +98,7 @@ class CloudCLI:
         """Prepare required ansible files: inventory, ssh.config, ansible.cfg"""
         nodes = self.list_nodes()
         AnsibleManager(self.config, self.project_name).prepare_files(nodes)
+
     #
 
     #
@@ -87,11 +106,13 @@ class CloudCLI:
         """Run the ansible setup on the cluster in the cloud"""
         AnsibleManager(self.config, self.project_name).run_ansible_setup()
         return
+
     #
 
     #
     def list_nodes(self):
         return self.platform_driver.list_nodes()
+
     #
 
     #

@@ -1,7 +1,7 @@
 import logging
 import os
 import stat
-import utils
+import clilib.utils as utils
 import time
 
 from libcloud.compute.types import Provider

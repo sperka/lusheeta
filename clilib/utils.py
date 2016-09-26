@@ -28,8 +28,8 @@ def load_supported_platforms_config():
     return supported_platforms
 
 
-def import_platform_class(mod_name, class_name):
-    mod = __import__("clilib." + mod_name)
+def import_platform_class(pkg_name, mod_name, class_name):
+    mod = __import__("%s.%s" % (pkg_name, mod_name))
     mod = getattr(mod, mod_name)
     mod = getattr(mod, class_name)
     return mod

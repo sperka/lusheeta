@@ -2,10 +2,13 @@
 # Supported platforms
 #
 # platform:
-#  module_name: <the python filename you implemented>
-#  class_name: <the name of the class in the implementation>
+#   package_name: <the package name that contains the module>
+#   module_name: <the python module you implemented>
+#   class_name: <the name of the class in the implementation>
+#   settings_file: <path to platform-specific settings file>
 
 openstack:
-  module_name: openstack_driver
+  package_name: extension
+  module_name: openstack_extension
   class_name: OpenStackDriver
   settings_file: ./config/openstack.yml
