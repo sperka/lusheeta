@@ -243,7 +243,7 @@ class OpenStackDriver:
 
         if router:
             if port and subnet_id:
-                self.network_driver.router_remove_interface(router, subnet_id, port.id)
+                self.network_driver.remove_interface_from_router(router, subnet_id, port.id)
             else:
                 self.logger.warn("Router port (%s) or subnet not found. Skipping...", self._router_port_name)
 
