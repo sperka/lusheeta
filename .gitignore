@@ -99,3 +99,6 @@ projects/
 
 # ansible
 *.retry
+
+# vagrant
+.vagrant
