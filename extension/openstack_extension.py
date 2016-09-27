@@ -207,7 +207,7 @@ class OpenStackDriver:
                 )
                 port = self.network_driver.create_port(name=self._router_port_name, network_id=network.id,
                                                        fixed_ips=[{"subnet_id": subnet.id, "ip_address": gateway_ip}])
-                self.network_driver.router_add_interface(router, subnet_id=subnet.id, port_id=port.id)
+                self.network_driver.add_interface_to_router(router, subnet_id=subnet.id, port_id=port.id)
             else:
                 self.logger.error("External gateway '%s' not found. Can't connect router to the external network...",
                                   self.config['network']['ext_net_name'])
