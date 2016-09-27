@@ -8,3 +8,8 @@ apt-get install -y ansible git
 
 git clone https://github.com/sperka/lusheeta.git
 cd lusheeta
+
+easy_install pip
+
+pip install backports.ssl_match_hostname
+pip install -i requirements.txt
