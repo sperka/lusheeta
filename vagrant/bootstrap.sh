@@ -7,6 +7,7 @@ apt-get update
 apt-get install -y ansible git
 
 git clone https://github.com/sperka/lusheeta.git
+chown -R vagrant:vagrant lusheeta
 cd lusheeta
 
 easy_install pip
