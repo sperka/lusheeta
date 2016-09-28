@@ -26,7 +26,9 @@ if __name__ == "__main__":
         config_file = args.config
     cli_config = utils.load_yaml_config(config_file)
     verbose_level = args.verbose
-    project_name = args.project[0]
+    project_name_in = args.project[0].lower()
+
+    project_name = ''.join(c for c in project_name_in if c.isalnum())
 
     # setup logger
     logging.basicConfig(level=utils.get_log_level(verbose_level))
@@ -37,6 +39,10 @@ if __name__ == "__main__":
     cli_config['project'] = project_name
 
     logger.info("Starting Lusheeta CLI...")
+
+    if project_name_in != project_name:
+        logger.info("Passed project name was cleaned (%s -> %s)", project_name_in, project_name)
+
     logger.debug("Allowed actions for the CLI: %s", allowed_actions)
     logger.debug("Passed args:\t"
                  "action = '%s'\t"
