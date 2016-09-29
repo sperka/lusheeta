@@ -24,6 +24,22 @@ cluster of your choice (see #Configuration).
                             path to the configuration file
       -v, --verbose         set verbosity mode
 
+The following examples will show how to setup a cluster (after configuring all necessary settings in the config file):
+
+```sh
+    # create cluster with an external config.yml + show debug messages
+    $ ./main.py --action create --config /path/to/config.yml -vvv myproject
+    
+    # after cluster has been created, generate necessary ansible files + show only 'info' level logging
+    $ ./main.py --action prepare_ansible --config /path/to/config.yml -vv myproject
+    
+    # run ansible playbook to setup software infrastructure
+    $ ./main.py -a run_ansible -c /path/to/config.yml myproject
+    
+    # cleanup cluster from the cloud
+    $ ./main.py -a cleanup -vvv myproject
+```
+
 ---
 
 # Configuration
@@ -116,5 +132,5 @@ doesn't support the required functionalities (i.e. creating/removing subnets, ne
 
 ## Extension
 
-`supported_platforms.yml`
+`./config/supported_platforms.yml` contains the implementations of different platforms (so far only openstack is supported).
 
