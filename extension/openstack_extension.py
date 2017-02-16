@@ -4,15 +4,15 @@ import stat
 import clilib.utils as utils
 import time
 
-from libcloud.compute.types import Provider
-from libcloud.compute.providers import get_driver
-
 from openstack import connection
 
 
 class OpenStackDriver:
     cloud_images_dict = None
+    flavors_dict = None
     ip_pools = None
+    proj_network_cached = None
+    ext_net_cached = None
 
     def __init__(self, config, project_name):
         self.logger = logging.getLogger(__name__)
@@ -23,12 +23,6 @@ class OpenStackDriver:
         self.logger.debug("Loading openstack yaml config '%s'", config['platform_settings']['settings_file'])
         openstack_settings = utils.load_yaml_config(config['platform_settings']['settings_file'])
 
-        self.driver = get_driver(Provider.OPENSTACK)(openstack_settings['username'], openstack_settings['password'],
-                                                     ex_tenant_name=openstack_settings['project_name'],
-                                                     ex_force_auth_url=openstack_settings['auth_url_base'] + '/tokens',
-                                                     ex_force_auth_version='2.0_password',
-                                                     ex_force_service_region=openstack_settings['region_name'])
-
         auth_args = {
             'auth_url': openstack_settings['auth_url_base'],
             'project_name': openstack_settings['project_name'],
@@ -36,7 +30,10 @@ class OpenStackDriver:
             'password': openstack_settings['password']
         }
         conn = connection.Connection(**auth_args)
-        self.network_driver = conn.network
+        self.network_api = conn.network
+        self.compute_api = conn.compute
+        self.cluster_api = conn.cluster
+        self.identity_api = conn.identity
 
         # setup vars
         self._ssh_key = self.project_name + "_ssh"
@@ -108,7 +105,7 @@ class OpenStackDriver:
         :return: The security group that belongs to the project or if it doesn't exists, None
         :rtype: :class:`OpenStackSecurityGroup`
         """
-        all_security_groups = self.driver.ex_list_security_groups()
+        all_security_groups = self.network_api.security_groups()
         sg = None
         default = None
         for sec_group in all_security_groups:
@@ -118,7 +115,7 @@ class OpenStackDriver:
 
             if sec_group.name == self._sec_group_name:
                 sg = sec_group
-                break
+                continue
 
         if include_default:
             return [default, sg]
@@ -135,21 +132,20 @@ class OpenStackDriver:
         sg = self.get_security_group()
         if not sg:
             self.logger.info("Creating security group '%s'", self._sec_group_name)
-            sg = self.driver.ex_create_security_group(
-                self._sec_group_name, "Security group for project '" + self.project_name + "'")
+            sg = self.network_api.create_security_group(name=self._sec_group_name,
+                                                        description="Security group for project '" + self.project_name + "'")
 
             self.logger.info("Creating security group rules for '%s'", self._sec_group_name)
-            # self.driver.ex_create_security_group_rule(sg, 'tcp', 1, 65535, source_security_group=sg)
-            # self.driver.ex_create_security_group_rule(sg, 'udp', 1, 65535, source_security_group=sg)
-            self.network_driver.create_security_group_rule(direction="ingress",
-                                                           ethertype="IPv4",
-                                                           port_range_min=1, port_range_max=65535, protocol="tcp",
-                                                           security_group_id=sg.id)
 
-            self.network_driver.create_security_group_rule(direction="egress",
-                                                           ethertype="IPv4",
-                                                           port_range_min=1, port_range_max=65535, protocol="tcp",
-                                                           security_group_id=sg.id)
+            self.network_api.create_security_group_rule(direction="ingress",
+                                                        ether_type="IPv4",
+                                                        port_range_min=1, port_range_max=65535, protocol="tcp",
+                                                        security_group_id=sg.id)
+
+            self.network_api.create_security_group_rule(direction="egress",
+                                                        ether_type="IPv4",
+                                                        port_range_min=1, port_range_max=65535, protocol="tcp",
+                                                        security_group_id=sg.id)
 
         else:
             self.logger.warn("A security group with the name '%s' already exists! "
@@ -163,23 +159,26 @@ class OpenStackDriver:
         sg = self.get_security_group()
         if sg:
             self.logger.info("Cleaning up security group rules for '%s'", self._sec_group_name)
-            for rule in sg.rules:
-                self.driver.ex_delete_security_group_rule(rule)
+            for rule in sg.security_group_rules:
+                self.network_api.delete_security_group_rule(rule)
             self.logger.info("Cleaning up security group '%s'", self._sec_group_name)
-            self.driver.ex_delete_security_group(sg)
+            self.network_api.delete_security_group(sg)
         else:
             self.logger.warn("Security group '%s' was not found. Skipping...", self._sec_group_name)
 
-    def get_network(self):
-        networks = self.driver.ex_list_networks()
-        for network in networks:
-            if network.name == self._network_name:
-                return network
-        return None
+    def get_proj_network(self):
+        if not OpenStackDriver.proj_network_cached:
+            OpenStackDriver.proj_network_cached = self.network_api.find_network(name_or_id=self._network_name)
+        return OpenStackDriver.proj_network_cached
+
+    def get_ext_net(self):
+        if not OpenStackDriver.ext_net_cached:
+            OpenStackDriver.ext_net_cached = self.network_api.find_network(name_or_id=self.config['network']['ext_net_name'])
+        return OpenStackDriver.ext_net_cached
 
     def create_network(self):
 
-        network = self.get_network()
+        network = self.get_proj_network()
         if not network:
             self.logger.info("Creating network '%s'", self._network_name)
             cidr = self.config['network']['cidr']
@@ -189,25 +188,24 @@ class OpenStackDriver:
                 cidr = self.get_next_cidr()
                 self.logger.debug("Next CIDR: '%s'", cidr)
 
-            # self.driver.ex_create_network(self._network_name, cidr)
-            network = self.network_driver.create_network(name=self._network_name)
+            network = self.network_api.create_network(name=self._network_name)
             gateway_ip = cidr.replace('.0/24', '.1')
-            subnet = self.network_driver.create_subnet(
+            subnet = self.network_api.create_subnet(
                 name=self._subnet_name,
                 network_id=network.id,
                 ip_version="4",
                 cidr=cidr,
                 gateway_ip=gateway_ip
             )
-            ext_net_network = self.network_driver.find_network(self.config['network']['ext_net_name'])
+            ext_net_network = self.get_ext_net()
             if ext_net_network:
-                router = self.network_driver.create_router(
+                router = self.network_api.create_router(
                     name=self._router_name,
                     external_gateway_info={'network_id': ext_net_network.id}
                 )
-                port = self.network_driver.create_port(name=self._router_port_name, network_id=network.id,
-                                                       fixed_ips=[{"subnet_id": subnet.id, "ip_address": gateway_ip}])
-                self.network_driver.add_interface_to_router(router, subnet_id=subnet.id, port_id=port.id)
+                port = self.network_api.create_port(name=self._router_port_name, network_id=network.id,
+                                                    fixed_ips=[{"subnet_id": subnet.id, "ip_address": gateway_ip}])
+                self.network_api.add_interface_to_router(router, subnet_id=subnet.id, port_id=port.id)
             else:
                 self.logger.error("External gateway '%s' not found. Can't connect router to the external network...",
                                   self.config['network']['ext_net_name'])
@@ -219,7 +217,7 @@ class OpenStackDriver:
 
     def get_next_cidr(self):
         cidr_template = self.config['network']['cidr_template']
-        subnets = list(self.network_driver.subnets())
+        subnets = list(self.network_api.subnets())
 
         cidr_ctr = len(subnets)
         search_next_cidr = True
@@ -234,55 +232,50 @@ class OpenStackDriver:
     def cleanup_network(self):
         self.logger.info("Cleaning up network %s", self._network_name)
 
-        router = self.network_driver.find_router(self._router_name)
-        port = self.network_driver.find_port(self._router_port_name)
-        network = self.network_driver.find_network(self._network_name)
+        router = self.network_api.find_router(self._router_name)
+        port = self.network_api.find_port(self._router_port_name)
+        network = self.get_proj_network()
         subnet_id = None
         if network and len(network.subnet_ids):
             subnet_id = network.subnet_ids[0]
 
         if router:
             if port and subnet_id:
-                self.network_driver.remove_interface_from_router(router, subnet_id, port.id)
+                self.network_api.remove_interface_from_router(router, subnet_id, port.id)
             else:
                 self.logger.warn("Router port (%s) or subnet not found. Skipping...", self._router_port_name)
 
-            self.network_driver.delete_router(router)
+            self.network_api.delete_router(router)
         else:
             self.logger.warn("Router '%s' was not found. Skipping...", self._router_name)
 
-        # network = self.get_network()
-
         if network:
-            # self.driver.ex_delete_network(network)
             self.logger.info("Cleaning up network '%s' and its subnet '%s'", self._network_name, self._subnet_name)
             for subnet in network.subnet_ids:
-                self.network_driver.delete_subnet(subnet, ignore_missing=False)
-            self.network_driver.delete_network(network, ignore_missing=False)
+                self.network_api.delete_subnet(subnet, ignore_missing=False)
+            self.network_api.delete_network(network, ignore_missing=False)
         else:
             self.logger.warn("Network '%s' was not found. Skipping...", self._network_name)
 
     def create_ssh_key_pair(self):
         project_path = os.path.join(self.config['projects_dir'], self.config['project'])
-        self.logger.info("Creating ssh key pair %s and saving to %s", self._ssh_key, project_path)
 
-        key_pair = self.driver.create_key_pair(name=self._ssh_key)
-        utils.save_string_to_file(key_pair.private_key, os.path.join(project_path, self._ssh_key),
-                                  chmod=(stat.S_IRUSR | stat.S_IWUSR))
-        utils.save_string_to_file(key_pair.public_key, os.path.join(project_path, self._ssh_key + ".pub"))
+        kp = self.compute_api.find_keypair(name_or_id=self._ssh_key)
+        if not kp:
+            self.logger.info("Creating ssh key pair %s and saving to %s", self._ssh_key, project_path)
+
+            key_pair = self.compute_api.create_keypair(name=self._ssh_key)
+            utils.save_string_to_file(key_pair.private_key, os.path.join(project_path, self._ssh_key),
+                                      chmod=(stat.S_IRUSR | stat.S_IWUSR))
+            utils.save_string_to_file(key_pair.public_key, os.path.join(project_path, self._ssh_key + ".pub"))
 
     def cleanup_ssh_key_pair(self):
         self.logger.info("Cleaning up ssh key pair %s", self._ssh_key)
 
-        key_pairs = self.driver.ex_list_keypairs()
-        key_pair = None
-        for kp in key_pairs:
-            if kp.name == self._ssh_key:
-                key_pair = kp
-                break
+        key_pair = self.compute_api.find_keypair(name_or_id=self._ssh_key)
 
         if key_pair:
-            self.driver.delete_key_pair(key_pair)
+            self.compute_api.delete_keypair(key_pair)
         else:
             self.logger.warn("SSH key pair %s not found. Skipping...", self._ssh_key)
 
@@ -295,21 +288,20 @@ class OpenStackDriver:
                               self._sec_group_name)
             exit(1)
 
-        network = self.get_network()
+        network = self.get_proj_network()
         if not network:
             self.logger.error("Error retrieving network %s when creating nodes. Quitting...", self._network_name)
             exit(1)
+        network_ids = [{'uuid': network.id}]
 
-        sizes_list = self.driver.list_sizes()
-        if not sizes_list:
-            self.logger.error("Error retrieving flavors. Quitting...")
-            exit(1)
-
-        node_sizes = dict((x.name, x) for x in sizes_list)
         default_image = self.get_image(self.config['vm_management']['default_image_name'])
 
         hosts = self.config['hosts']
         new_nodes = []
+
+        self.logger.debug("Waiting for new nodes to start up...")
+        start_time = time.time()
+
         for host in hosts:
             cnt = host['count']
 
@@ -318,10 +310,10 @@ class OpenStackDriver:
                 if cnt > 1:
                     host_name = host_name + "_" + str(i + 1)
 
-                flavor = host.get('vm_flavor', self.config['vm_management']['default_vm_flavor'])
-                size = node_sizes[flavor]
-                if not size:
-                    self.logger.error("Flavor '%s' doesn't exist. Skipping creating host '%s'", flavor, host_name)
+                flavor_name = host.get('vm_flavor', self.config['vm_management']['default_vm_flavor'])
+                flavor = self.get_flavor(flavor_name)
+                if not flavor:
+                    self.logger.error("Flavor '%s' doesn't exist. Skipping creating host '%s'", flavor_name, host_name)
                     continue
 
                 image = default_image
@@ -329,23 +321,26 @@ class OpenStackDriver:
                     image = self.get_image(host['image_name'])
 
                 self.logger.info("Creating VM: %s", host_name)
-                node = self.driver.create_node(name=host_name,
-                                               size=size,
-                                               image=image,
-                                               ex_keyname=self._ssh_key,
-                                               ex_security_groups=security_groups,
-                                               networks=[network])
-                new_nodes.append(node)
 
-        self.logger.debug("Waiting for new nodes to start up...")
-        start_time = time.time()
-        self.driver.wait_until_running(new_nodes, wait_period=5,
-                                       timeout=self.config['vm_management']['hosts_startup_timeout'])
-        self.logger.debug("Startup for %s nodes took %s seconds", len(new_nodes), (time.time() - start_time))
+                node = self.compute_api.create_server(
+                    name=host_name,
+                    flavor_id=flavor.id,
+                    image_id=image.id,
+                    key_name=self._ssh_key,
+                    networks=network_ids
+                )
+
+                new_nodes.append(node)
+                self.compute_api.wait_for_server(node)
+
+                for sg in security_groups:
+                    self.compute_api.add_security_group_to_server(node, sg)
+
+        self.logger.info("Startup for %s nodes took %s seconds", len(new_nodes), (time.time() - start_time))
 
     def get_image(self, name):
         if not OpenStackDriver.cloud_images_dict:
-            cloud_images = self.driver.list_images()
+            cloud_images = self.compute_api.images()
             if not cloud_images:
                 self.logger.error("Error retrieving image list. Quitting...")
                 exit(1)
@@ -353,14 +348,20 @@ class OpenStackDriver:
 
         return OpenStackDriver.cloud_images_dict[name]
 
+    def get_flavor(self, name):
+        if not OpenStackDriver.flavors_dict:
+            flavors_list = self.compute_api.flavors()
+            if not flavors_list:
+                self.logger.error("Error retrieving flavors. Quitting...")
+                exit(1)
+            OpenStackDriver.flavors_dict = dict((x.name, x) for x in flavors_list)
+
+        return OpenStackDriver.flavors_dict[name]
+
     def terminate_vms(self):
         self.logger.info("Terminating VMs...")
-        nodes = self.driver.list_nodes()
+        nodes = self.compute_api.servers()
         node_names = []
-
-        # def gather_names(hostname):
-        #    node_names.append(hostname)
-        # self.iterate_through_hosts(gather_names)
 
         for host in self.config['hosts']:
             cnt = host['count']
@@ -373,9 +374,7 @@ class OpenStackDriver:
         for node in nodes:
             if node.name in node_names:
                 self.logger.info("Terminating VM: %s", node.name)
-                res = self.driver.destroy_node(node)
-                if not res:
-                    self.logger.error("Error terminating %s!")
+                self.compute_api.delete_server(node.id)
 
         # need to wait until termination process finishes
         self.logger.debug("Waiting for nodes to terminate...")
@@ -383,13 +382,13 @@ class OpenStackDriver:
         while wait_more:
             self.logger.debug("Still waiting for nodes to terminate...")
             time.sleep(self.config['vm_management']['terminate_vm_poll'])
-            nodes = self.driver.list_nodes()
+            nodes = self.compute_api.servers()
             wait_more = any(node.name in node_names for node in nodes)
 
         self.logger.debug("All nodes terminated...")
 
     def process_cloud_vars(self):
-        nodes = self.driver.list_nodes()
+        nodes = list(self.compute_api.servers())
 
         for host in self.config['hosts']:
             cnt = host['count']
@@ -405,20 +404,13 @@ class OpenStackDriver:
                             self.create_and_assign_floating_ip(host, index, nodes)
 
     def create_and_assign_floating_ip(self, host, index, nodes):
-        if not OpenStackDriver.ip_pools:
-            OpenStackDriver.ip_pools = self.driver.ex_list_floating_ip_pools()
-            if not OpenStackDriver.ip_pools:
-                self.logger.error("Error retrieving ip_pools. Quitting...")
-                exit(1)
-
         def pick_node(_nodes, name):
             for n in _nodes:
                 if n.name == name:
                     return n
 
-        ip_pool = OpenStackDriver.ip_pools[0] if len(OpenStackDriver.ip_pools) > 0 else None
-        if ip_pool:
-            ip_pool = ip_pool.name
+        ext_net = self.get_ext_net()
+
         cnt = host['count']
         if index == 'all' or index == 'counter':
             index = range(0, cnt)
@@ -426,16 +418,15 @@ class OpenStackDriver:
             index = range(index, index + 1)
 
         for i in index:
-            floating_ip_address = self.driver.ex_create_floating_ip(ip_pool=ip_pool)
             host_name = self.project_name + "-" + host['name']
             if cnt > 1:
                 host_name = host_name + "_" + str(i + 1)
+            floating_ip = self.network_api.create_ip(description="Floating IP for " + host_name,
+                                                     floating_network_id=ext_net.id)
+
             node = pick_node(nodes, host_name)
             self.logger.info("Creating floating ip and assigning to node %s", host_name)
-            succ = self.driver.ex_attach_floating_ip_to_node(node, floating_ip_address)
-            if not succ:
-                self.logger.error("Couldn't attach floating ip address %s to node %s", floating_ip_address.ip_address,
-                                  host_name)
+            self.compute_api.add_floating_ip_to_server(node, floating_ip.floating_ip_address)
 
     def iterate_through_hosts(self, action):
         for host in self.config['hosts']:
@@ -451,7 +442,7 @@ class OpenStackDriver:
     def disassociate_floating_ips(self):
         self.logger.info("Disassociating public ips from VMs...")
 
-        nodes = self.driver.list_nodes()
+        nodes = self.compute_api.servers()
         node_names = []
         for host in self.config['hosts']:
             cnt = host['count']
@@ -462,18 +453,19 @@ class OpenStackDriver:
                     host_name = host_name + "_" + str(i + 1)
                 node_names.append(host_name)
 
-        floating_ips = self.driver.ex_list_floating_ips()
-        floating_ips_dict = dict((x.ip_address, x) for x in floating_ips)
+        floating_ips = self.network_api.ips()
+        floating_ips_dict = dict((x.floating_ip_address, x) for x in floating_ips)
 
         for node in nodes:
             if node.name in node_names:
-                if node.public_ips:
-                    for ip_to_detach in node.public_ips:
-                        self.logger.info("Detaching ip '%s' from node '%s'", ip_to_detach, node.name)
-                        self.driver.ex_detach_floating_ip_from_node(node, ip_to_detach)
+                if node.addresses[self._network_name]:
+                    for ip_to_detach in node.addresses[self._network_name]:
+                        if ip_to_detach['OS-EXT-IPS:type'] != 'fixed':
+                            self.logger.info("Detaching ip '%s' from node '%s'", ip_to_detach['addr'], node.name)
+                            self.compute_api.remove_floating_ip_from_server(node, ip_to_detach['addr'])
 
-                    self.logger.info("Deleting floating ip '%s'", ip_to_detach)
-                    self.driver.ex_delete_floating_ip(floating_ips_dict[ip_to_detach])
+                            self.logger.info("Deleting floating ip '%s'", ip_to_detach)
+                            self.network_api.delete_ip(floating_ips_dict[ip_to_detach['addr']])
 
     def list_nodes(self):
-        return self.driver.list_nodes()
+        return list(self.compute_api.servers())

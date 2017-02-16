@@ -6,7 +6,7 @@ cluster of your choice (see #Configuration).
 ---
 # Usage
 
-    $ ./main.py -h                                                                                                            2 ↵
+    $ ./main.py -h
     usage: main.py [-h] -a {create,cleanup,prepare_ansible,run_ansible}
                    [-c CONFIG] [-v]
                    project
@@ -127,6 +127,8 @@ This configuration file is the main configuration for the CLI tool. You can set 
 ** For OpenStack networking the
 [official OpenStack SDK](http://developer.openstack.org/sdks/python/openstacksdk/users/index.html) was used as libcloud
 doesn't support the required functionalities (i.e. creating/removing subnets, networks, routers, etc).
+
+**UPDATE** `libcloud` dropped completely.
 
 ---
 

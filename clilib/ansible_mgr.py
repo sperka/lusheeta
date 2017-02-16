@@ -15,6 +15,7 @@ class AnsibleManager:
         self.logger = logging.getLogger(__name__)
         self.config = config
         self.project_name = project_name
+        self._network_name = self.project_name + "_network"
 
         templates_path = config['ansible'].get('templates_path')
         if templates_path:
@@ -182,15 +183,16 @@ class AnsibleManager:
             self.logger.error("Couldn't find host '%s'. Skipping generating ssh.config file...", host_name)
             return
 
-        if len(node.public_ips) > 0:
-            template_vars['bastion_public_ip'] = node.public_ips[0]
+        private_ip = self.get_ip(node, 'private')
+        public_ip = self.get_ip(node, 'public')
+        if public_ip:
+            template_vars['bastion_public_ip'] = public_ip
         else:
             self.logger.error("Bastion host doesn't have public_ips. Can't generate ssh.config...")
             return
 
-        if len(node.private_ips) > 0:
-            bastion_private_ip = node.private_ips[0]
-            template_vars['private_ip_address_space'] = re.sub(r'(\d+\.\d+\.\d+\.)\d+', r'\1*', bastion_private_ip)
+        if private_ip:
+            template_vars['private_ip_address_space'] = re.sub(r'(\d+\.\d+\.\d+\.)\d+', r'\1*', private_ip)
         else:
             self.logger.error("Bastion host doesn't have private_ips. Can't generate ssh.config...")
             return
@@ -244,11 +246,14 @@ class AnsibleManager:
                               host_name)
             return
 
+        private_ip = self.get_ip(node, 'private')
+        public_ip = self.get_ip(node, 'public')
+
         if ans_host_val == 'private_ip':
-            if len(node.private_ips) > 0:
-                ip = node.private_ips[0]
-            elif len(node.public_ips) > 0:
-                ip = node.public_ips[0]
+            if private_ip:
+                ip = private_ip
+            elif public_ip:
+                ip = public_ip
                 self.logger.warn(
                     "'ansible_host' for host '%s' was substituted with a "
                     "public ip instead of a private one. No private ips present.",
@@ -260,10 +265,10 @@ class AnsibleManager:
                     host_name)
                 return ans_host_val
         else:
-            if len(node.public_ips) > 0:
-                ip = node.public_ips[0]
-            elif len(node.private_ips) > 0:
-                ip = node.private_ips[0]
+            if public_ip:
+                ip = public_ip
+            elif private_ip:
+                ip = private_ip
                 self.logger.warn(
                     "'ansible_host' for host '%s' was substituted with a "
                     "private ip instead of a public one. No public ips present.",
@@ -288,3 +293,16 @@ class AnsibleManager:
         self.logger.debug("Substituting 'hostname' to '%s'", host_name)
         return host_name
         #
+
+    def get_ip(self, node, type):
+        t = 'fixed'
+        if type == 'private':
+            t = 'fixed'
+        if type == 'public':
+            t = 'floating'
+
+        for a in node.addresses[self._network_name]:
+            if a['OS-EXT-IPS:type'] == t:
+                return a['addr']
+
+        return None
