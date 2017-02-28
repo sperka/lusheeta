@@ -233,20 +233,37 @@ class OpenStackDriver:
         self.logger.info("Cleaning up network %s", self._network_name)
 
         router = self.network_api.find_router(self._router_name)
-        port = self.network_api.find_port(self._router_port_name)
         network = self.get_proj_network()
         subnet_id = None
         if network and len(network.subnet_ids):
             subnet_id = network.subnet_ids[0]
 
         if router:
-            if port and subnet_id:
-                self.network_api.remove_interface_from_router(router, subnet_id, port.id)
-            else:
-                self.logger.warn("Router port (%s) or subnet not found. Skipping...", self._router_port_name)
+            if subnet_id:
+                from openstack.exceptions import NotFoundException
+                ports = self.network_api.ports(subnet_id=subnet_id)
+                for port in ports:
+                    try:
+                        self.network_api.remove_interface_from_router(router, subnet_id, port.id)
+                    except NotFoundException as e:
+                        self.logger.error("Problem with removing interface from router: %s", e.message)
 
+                    # and remove port as well
+                    if not port.device_owner.startswith('network:'):
+                        self.network_api.delete_port(port)
+            else:
+                self.logger.warn("Subnet and its ports not found. Skipping...")
+
+            # remove router
             self.network_api.delete_router(router)
         else:
+            if subnet_id:
+                # if router already removed but some ports are still around...
+                ports = self.network_api.ports(subnet_id=subnet_id)
+                for port in ports:
+                    if not port.device_owner.startswith('network:'):
+                        self.network_api.delete_port(port)
+
             self.logger.warn("Router '%s' was not found. Skipping...", self._router_name)
 
         if network:
