@@ -475,7 +475,7 @@ class OpenStackDriver:
 
         for node in nodes:
             if node.name in node_names:
-                if node.addresses[self._network_name]:
+                if self._network_name in node.addresses and node.addresses[self._network_name]:
                     for ip_to_detach in node.addresses[self._network_name]:
                         if ip_to_detach['OS-EXT-IPS:type'] != 'fixed':
                             self.logger.info("Detaching ip '%s' from node '%s'", ip_to_detach['addr'], node.name)
