@@ -241,12 +241,12 @@ class OpenStackDriver:
         if router:
             if subnet_id:
                 from openstack.exceptions import NotFoundException
-                ports = self.network_api.ports(subnet_id=subnet_id)
+                ports = list(self.network_api.ports(network_id=network.id))
                 for port in ports:
                     try:
                         self.network_api.remove_interface_from_router(router, subnet_id, port.id)
                     except NotFoundException as e:
-                        self.logger.error("Problem with removing interface from router: %s", e.message)
+                        self.logger.error("Problem with removing interface from router: %s (%s)", e.message, e.details)
 
                     # and remove port as well
                     if not port.device_owner.startswith('network:'):
@@ -259,7 +259,7 @@ class OpenStackDriver:
         else:
             if subnet_id:
                 # if router already removed but some ports are still around...
-                ports = self.network_api.ports(subnet_id=subnet_id)
+                ports = self.network_api.ports(network_id=network.id)
                 for port in ports:
                     if not port.device_owner.startswith('network:'):
                         self.network_api.delete_port(port)
@@ -377,16 +377,10 @@ class OpenStackDriver:
 
     def terminate_vms(self):
         self.logger.info("Terminating VMs...")
-        nodes = self.compute_api.servers()
+        nodes = list(self.compute_api.servers())
         node_names = []
 
-        for host in self.config['hosts']:
-            cnt = host['count']
-            for i in range(0, cnt):
-                host_name = self.project_name + "-" + host['name']
-                if cnt > 1:
-                    host_name = host_name + "_" + str(i + 1)
-                node_names.append(host_name)
+        self.iterate_through_hosts(lambda n: node_names.append(n))
 
         for node in nodes:
             if node.name in node_names:
@@ -461,14 +455,7 @@ class OpenStackDriver:
 
         nodes = self.compute_api.servers()
         node_names = []
-        for host in self.config['hosts']:
-            cnt = host['count']
-
-            for i in range(0, cnt):
-                host_name = self.project_name + "-" + host['name']
-                if cnt > 1:
-                    host_name = host_name + "_" + str(i + 1)
-                node_names.append(host_name)
+        self.iterate_through_hosts(lambda n: node_names.append(n))
 
         floating_ips = self.network_api.ips()
         floating_ips_dict = dict((x.floating_ip_address, x) for x in floating_ips)
