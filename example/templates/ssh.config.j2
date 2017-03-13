@@ -8,6 +8,7 @@ Host {{ private_ip_address_space }}
 User            ubuntu
 ProxyCommand    ssh -F {{ ssh_config_path }} {{ bastion_public_ip }} nc %h %p
 IdentityFile    {{ ssh_private_key_path }}
+IdentitiesOnly  yes
 
 Host {{ bastion_public_ip }}
 User  ubuntu
@@ -16,3 +17,4 @@ ForwardAgent    yes
 ControlMaster   auto
 ControlPath     {{ ssh_control_path }}
 ControlPersist  5m
+IdentitiesOnly  yes
