@@ -9,6 +9,7 @@ User            ubuntu
 ProxyCommand    ssh -F {{ ssh_config_path }} {{ bastion_public_ip }} nc %h %p
 IdentityFile    {{ ssh_private_key_path }}
 IdentitiesOnly  yes
+ConnectTimeout  60
 
 Host {{ bastion_public_ip }}
 User  ubuntu
@@ -17,3 +18,4 @@ ForwardAgent    yes
 ControlMaster   auto
 ControlPersist  5m
 IdentitiesOnly  yes
+ConnectTimeout  60

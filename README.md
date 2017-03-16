@@ -61,6 +61,9 @@ This configuration file is the main configuration for the CLI tool. You can set 
     * default: `openstack`
     * currently supported platforms: `openstack`
     
+ * `platform_settings_file` _optional_ - the path to settings_file for the platform. It's the same as `settings_file`
+ in `supported_platforms.yml` but if defined, has a higher priority (easier to define openstack credentials outside the source)
+
  * `network` _dict_ - the network settings for your cluster (when creating)
     * `cidr` - the CIDR for your cluster's network. 
         * default: `auto`

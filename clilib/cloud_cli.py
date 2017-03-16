@@ -29,6 +29,11 @@ class CloudCLI:
         assert (platform_name in platforms)
 
         platform = platforms[platform_name]
+
+        # platform_settings_file check
+        if 'platform_settings_file' in config:
+            platform['settings_file'] = config['platform_settings_file']
+
         config['platform_settings'] = platform
 
         self.project_path = os.path.join(self.config['projects_dir'], self.config['project'])
