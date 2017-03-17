@@ -93,6 +93,7 @@ ENV/
 
 # IDE
 .idea/
+.vscode/
 
 # project folder
 projects/

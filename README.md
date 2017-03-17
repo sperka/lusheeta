@@ -123,6 +123,7 @@ This configuration file is the main configuration for the CLI tool. You can set 
     * `inventory_template` _optional_ - a _jinja2_ template file for your inventory to use
     * `ssh_config_template` _optional_ - a _jinja2_ template file for the `ssh.config` file
     * `ansible_cfg_template` _optional_ - a _jinja2_ template file for the `ansible.cfg` file
+    * `ansible_bin_path` _required_ - the folder that holds `ansible`, `ansible-playbook`, etc
                  
                  
 ---

@@ -19,9 +19,11 @@ class AnsibleManager:
 
         templates_path = config['ansible'].get('templates_path')
         if templates_path:
-            self.j2_env = Environment(loader=FileSystemLoader(templates_path), trim_blocks=True)
+            self.j2_env = Environment(loader=FileSystemLoader(
+                templates_path), trim_blocks=True)
         else:
-            self.logger.error("No ansible.templates_path set. Can't continue...")
+            self.logger.error(
+                "No ansible.templates_path set. Can't continue...")
             exit(1)
 
         self.substitution_rules = {
@@ -43,31 +45,42 @@ class AnsibleManager:
         if inventory_template_path:
             self._generate_inventory_file(cloud_nodes)
         else:
-            self.logger.warn("ansible.inventory_template not set. Skipping inventory file generation...")
+            self.logger.warn(
+                "ansible.inventory_template not set. Skipping inventory file generation...")
 
-        ssh_config_template_path = ansible_settings.get('ssh_config_template');
+        ssh_config_template_path = ansible_settings.get('ssh_config_template')
         if ssh_config_template_path:
             self._generate_ssh_config_file(cloud_nodes)
         else:
-            self.logger.warn("ansible.ssh_config_template not set. Skipping ssh.config file generation...")
+            self.logger.warn(
+                "ansible.ssh_config_template not set. Skipping ssh.config file generation...")
 
-        ansible_cfg_template_path = ansible_settings.get('ansible_cfg_template')
+        ansible_cfg_template_path = ansible_settings.get(
+            'ansible_cfg_template')
         if ansible_cfg_template_path:
             self._generate_ansible_cfg_file()
         else:
-            self.logger.warn("ansible.ansible_cfg_template not set. Skipping ansible.cfg file generation...")
+            self.logger.warn(
+                "ansible.ansible_cfg_template not set. Skipping ansible.cfg file generation...")
 
     #
 
     #
     def run_ansible_setup(self):
-        ansible_dir = self.config['ansible']['ansible_dir']
-        playbook_path = os.path.abspath(os.path.join(ansible_dir, self.config['ansible']['playbook']))
+        ansible_config = self.config['ansible']
+
+        ansible_dir = ansible_config['ansible_dir']
+        playbook_path = os.path.abspath(os.path.join(
+            ansible_dir, ansible_config['playbook']))
         project_path = os.path.abspath(self.config['project_path'])
 
-        inventory_file = os.path.abspath(os.path.join(project_path, 'ansible_inventory'))
+        inventory_file = os.path.abspath(
+            os.path.join(project_path, 'ansible_inventory'))
+        ansible_playbook_executable = os.path.abspath(os.path.join(
+            ansible_config['ansible_bin_path'], 'ansible-playbook'))
 
-        subprocess.call(['ansible-playbook', playbook_path, '-i', inventory_file, '-vv'], cwd=project_path)
+        subprocess.call([ansible_playbook_executable, playbook_path,
+                         '-i', inventory_file, '-vv'], cwd=project_path)
 
     #
 
@@ -77,7 +90,8 @@ class AnsibleManager:
         tpl_file = self.config['ansible']['inventory_template']
         inventory_template = self.j2_env.get_template(tpl_file)
 
-        self.logger.info("Generating ansible inventory file from template '%s'...", tpl_file)
+        self.logger.info(
+            "Generating ansible inventory file from template '%s'...", tpl_file)
 
         hosts = self.config['hosts']
 
@@ -98,17 +112,21 @@ class AnsibleManager:
 
                 # iterate through 'ansible_settings' array
                 for ans_setting in host_ansible_settings:
-                    # get the array of the hosts for the inventory group so that we can add more
-                    inventory_group = template_vars.setdefault(ans_setting['ansible_group'], [])
+                    # get the array of the hosts for the inventory group so
+                    # that we can add more
+                    inventory_group = template_vars.setdefault(
+                        ans_setting['ansible_group'], [])
 
                     # we'll generate the string based on this dict
                     inventory_item = {}
 
-                    # check item_vars -- all 'count' entries will have these properties
+                    # check item_vars -- all 'count' entries will have these
+                    # properties
                     item_vars = ans_setting.get('item_vars', [])
                     for item_var in item_vars:
                         for item_var_key in item_var:
-                            sub_fn_name = self.substitution_rules['item_vars'].get(item_var_key)
+                            sub_fn_name = self.substitution_rules['item_vars'].get(
+                                item_var_key)
                             if sub_fn_name:
                                 sub_fn = getattr(self, sub_fn_name)
                                 if not sub_fn:
@@ -117,16 +135,19 @@ class AnsibleManager:
                                         sub_fn_name)
                                     continue
 
-                                # make a copy and remove "additional" 'self' key in order to pass the dict
+                                # make a copy and remove "additional" 'self'
+                                # key in order to pass the dict
                                 _locals = dict(locals())
                                 del _locals['self']
 
                                 # call function for substitution rule
-                                inventory_item[item_var_key] = sub_fn(**_locals)
+                                inventory_item[item_var_key] = sub_fn(
+                                    **_locals)
                             else:
                                 inventory_item[item_var_key] = item_var[item_var_key]
 
-                    # check group_vars -- entries with the proper index will be added
+                    # check group_vars -- entries with the proper index will be
+                    # added
                     group_vars = ans_setting.get('group_vars', []) or []
                     for group_var in group_vars:
                         # 'index' mandatory
@@ -138,7 +159,7 @@ class AnsibleManager:
                         if index == 'counter':
                             for group_var_key in group_var:
                                 if group_var_key != 'index':
-                                    inventory_item[group_var_key] = str(i+1)
+                                    inventory_item[group_var_key] = str(i + 1)
 
                     inventory_line = inventory_host_name + _SPACES + _SPACES.join(
                         ("%s=%s" % (k, v) for (k, v) in inventory_item.items()))
@@ -161,7 +182,8 @@ class AnsibleManager:
         ssh_config_template = self.j2_env.get_template(tpl_file)
         ssh_key_name = self.project_name + '_ssh'
 
-        self.logger.info("Generating ssh.config file from template '%s'...", tpl_file)
+        self.logger.info(
+            "Generating ssh.config file from template '%s'...", tpl_file)
 
         template_vars = {
             'project_name': self.project_name,
@@ -171,16 +193,20 @@ class AnsibleManager:
         }
 
         hosts = self.config['hosts']
-        bastion_host = next(host for host in hosts if host.get('type') == 'bastion')
+        bastion_host = next(
+            host for host in hosts if host.get('type') == 'bastion')
         if not bastion_host:
-            self.logger.error("No bastion host found in the default config. Skipping ssh.config generation...")
+            self.logger.error(
+                "No bastion host found in the default config. Skipping ssh.config generation...")
             return
 
         host_name = self.project_name + "-" + bastion_host['name']
-        node = next((node for node in cloud_nodes if node.name == host_name), None)
+        node = next(
+            (node for node in cloud_nodes if node.name == host_name), None)
 
         if not node:
-            self.logger.error("Couldn't find host '%s'. Skipping generating ssh.config file...", host_name)
+            self.logger.error(
+                "Couldn't find host '%s'. Skipping generating ssh.config file...", host_name)
             return
 
         private_ip = self.get_ip(node, 'private')
@@ -188,13 +214,16 @@ class AnsibleManager:
         if public_ip:
             template_vars['bastion_public_ip'] = public_ip
         else:
-            self.logger.error("Bastion host doesn't have public_ips. Can't generate ssh.config...")
+            self.logger.error(
+                "Bastion host doesn't have public_ips. Can't generate ssh.config...")
             return
 
         if private_ip:
-            template_vars['private_ip_address_space'] = re.sub(r'(\d+\.\d+\.\d+\.)\d+', r'\1*', private_ip)
+            template_vars['private_ip_address_space'] = re.sub(
+                r'(\d+\.\d+\.\d+\.)\d+', r'\1*', private_ip)
         else:
-            self.logger.error("Bastion host doesn't have private_ips. Can't generate ssh.config...")
+            self.logger.error(
+                "Bastion host doesn't have private_ips. Can't generate ssh.config...")
             return
 
         ssh_config_file_content = ssh_config_template.render(template_vars)
@@ -214,7 +243,8 @@ class AnsibleManager:
         ansible_cfg_template = self.j2_env.get_template(tpl_file)
         ssh_key_name = self.project_name + '_ssh'
 
-        self.logger.info("Generating ansible.cfg file from template '%s'...", tpl_file)
+        self.logger.info(
+            "Generating ansible.cfg file from template '%s'...", tpl_file)
 
         template_vars = {
             'ansible_dir': os.path.abspath(self.config['ansible']['ansible_dir']),
