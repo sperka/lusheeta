@@ -193,14 +193,15 @@ class AnsibleManager:
         }
 
         hosts = self.config['hosts']
-        bastion_host = next(
-            host for host in hosts if host.get('type') == 'bastion')
-        if not bastion_host:
+        main_host = next(
+            (host for host in hosts if host.get('type') == 'bastion'), None)
+        if not main_host:
             self.logger.error(
-                "No bastion host found in the default config. Skipping ssh.config generation...")
-            return
+                "No bastion host found in the default config. Picking first host in the list...")
+            # return
+            main_host = hosts[0]
 
-        host_name = self.project_name + "-" + bastion_host['name']
+        host_name = self.project_name + "-" + main_host['name']
         node = next(
             (node for node in cloud_nodes if node.name == host_name), None)
 
@@ -212,19 +213,22 @@ class AnsibleManager:
         private_ip = self.get_ip(node, 'private')
         public_ip = self.get_ip(node, 'public')
         if public_ip:
-            template_vars['bastion_public_ip'] = public_ip
+            template_vars['bastion_public_ip'] = public_ip # remove in next version
+            template_vars['main_public_ip'] = public_ip
+            template_vars['public_ip_address_space'] = re.sub(
+                r'(\d+\.\d+\.\d+\.)\d+', r'\1*', public_ip)
         else:
             self.logger.error(
-                "Bastion host doesn't have public_ips. Can't generate ssh.config...")
-            return
+                "Bastion/main host doesn't have public_ips. Skipping public ip related vars...")
+            # return
 
         if private_ip:
             template_vars['private_ip_address_space'] = re.sub(
                 r'(\d+\.\d+\.\d+\.)\d+', r'\1*', private_ip)
         else:
             self.logger.error(
-                "Bastion host doesn't have private_ips. Can't generate ssh.config...")
-            return
+                "Bastion/main host doesn't have private_ips. Skipping private ip related vars...")
+            # return
 
         ssh_config_file_content = ssh_config_template.render(template_vars)
 

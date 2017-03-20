@@ -12,9 +12,12 @@ if __name__ == "__main__":
 
     # setup command line arguments
     parser = argparse.ArgumentParser(description="CPSWTNG Cloud CLI tool")
-    parser.add_argument("-a", "--action", choices=allowed_actions, required=True, help="the action to do")
-    parser.add_argument("-c", "--config", type=argparse.FileType('r'), help="path to the configuration file")
-    parser.add_argument("-v", "--verbose", help="set verbosity mode", action="count")
+    parser.add_argument("-a", "--action", choices=allowed_actions,
+                        required=True, help="the action to do")
+    parser.add_argument("-c", "--config", type=argparse.FileType('r'),
+                        help="path to the configuration file")
+    parser.add_argument("-v", "--verbose",
+                        help="set verbosity mode", action="count")
     parser.add_argument("project", nargs=1, help="the name of the project")
 
     # parse command line args
@@ -41,7 +44,8 @@ if __name__ == "__main__":
     logger.info("Starting Lusheeta CLI...")
 
     if project_name_in != project_name:
-        logger.info("Passed project name was cleaned (%s -> %s)", project_name_in, project_name)
+        logger.info("Passed project name was cleaned (%s -> %s)",
+                    project_name_in, project_name)
 
     logger.debug("Allowed actions for the CLI: %s", allowed_actions)
     logger.debug("Passed args:\t"
