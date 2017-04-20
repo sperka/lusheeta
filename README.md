@@ -1,4 +1,4 @@
-# cpswtng-cloud-cli
+# lusheeta
 
 This set of scripts helps you to manage separate clusters in your cloud. The tool lets you `create` and `cleanup` a
 cluster of your choice (see #Configuration).
